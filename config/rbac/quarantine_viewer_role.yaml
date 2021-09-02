@@ -1,0 +1,20 @@
+# permissions for end users to view quarantines.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: quarantine-viewer-role
+rules:
+- apiGroups:
+  - ops.soer3n.info
+  resources:
+  - quarantines
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ops.soer3n.info
+  resources:
+  - quarantines/status
+  verbs:
+  - get

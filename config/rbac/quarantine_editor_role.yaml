@@ -1,0 +1,24 @@
+# permissions for end users to edit quarantines.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: quarantine-editor-role
+rules:
+- apiGroups:
+  - ops.soer3n.info
+  resources:
+  - quarantines
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ops.soer3n.info
+  resources:
+  - quarantines/status
+  verbs:
+  - get

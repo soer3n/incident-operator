@@ -1,0 +1,40 @@
+name: incident-operator
+namespace: dev
+autocreate: true
+image: okteto/golang:1
+command: bash
+securityContext:
+  capabilities:
+    add:
+    - SYS_PTRACE
+volumes:
+- /go/pkg/
+- /root/.cache/go-build/
+sync:
+- .:/usr/src/app
+remote: 2347
+forward:
+# - 8080:8080
+- 2347:2347
+environment:
+  PATH: $PATH:/usr/local/go/bin:/go/bin
+persistentVolume:
+  enabled: true
+  storageClass: local-path-storage
+  size: 2Gi
+resources:
+  requests:
+    memory: "1024Mi"
+    cpu: "500m"
+  limits:
+    memory: "2048Mi"
+    cpu: "1000m"
+initContainer:
+  resources:
+    requests:
+      cpu: 125m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+interface: 0.0.0.0
