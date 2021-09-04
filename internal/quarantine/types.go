@@ -17,12 +17,15 @@ type Debug struct {
 	Enabled bool
 }
 
-type Deployment struct {
+type resource struct {
 	Name      string
 	Namespace string
 }
 
+type Deployment struct {
+	resource
+}
+
 type Daemonset struct {
-	Name      string
-	Namespace string
+	resource
 }

@@ -4,6 +4,8 @@ import (
 	"github.com/soer3n/incident-operator/api/v1alpha1"
 )
 
+const QuarantineLabelSelector = "quarantine"
+
 func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 
 	nodes := []*Node{}
@@ -68,6 +70,8 @@ func (q *Quarantine) Update() error {
 			if err := n.update(); err != nil {
 				return err
 			}
+
+			return nil
 		}
 
 		return nil

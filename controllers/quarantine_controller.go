@@ -36,6 +36,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const QuarantineFinalizer = "finalizer.quarantine.ops.soer3n.info"
+
 // QuarantineReconciler reconciles a Quarantine object
 type QuarantineReconciler struct {
 	client.Client
@@ -82,7 +84,7 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if q.IsActive() {
-		reqLogger.Info("Quarantine already active. Updating it if needed.")
+		reqLogger.Info("Quarantine already active. Update if needed.")
 		return ctrl.Result{}, q.Update()
 	}
 
@@ -103,7 +105,7 @@ func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, ob
 			return err
 		}
 
-		controllerutil.RemoveFinalizer(instance, "finalizer.quarantine.ops.soer3n.info")
+		controllerutil.RemoveFinalizer(instance, QuarantineFinalizer)
 
 		if err := r.Update(context.Background(), instance); err != nil {
 			return err
@@ -112,7 +114,7 @@ func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, ob
 		return nil
 	}
 
-	if utils.Contains(instance.GetFinalizers(), "finalizer.quarantine.ops.soer3n.info") {
+	if utils.Contains(instance.GetFinalizers(), QuarantineFinalizer) {
 		if err := r.addFinalizer(instance); err != nil {
 			return err
 		}
@@ -127,7 +129,7 @@ func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, ob
 
 func (r *QuarantineReconciler) addFinalizer(q *v1alpha1.Quarantine) error {
 	log.Info("Adding Finalizer for the Quarantine Resource")
-	controllerutil.AddFinalizer(q, "quarantine.ops.soer3n.info")
+	controllerutil.AddFinalizer(q, QuarantineFinalizer)
 
 	// Update CR
 	if err := r.Update(context.TODO(), q); err != nil {
@@ -148,7 +150,7 @@ func (r *QuarantineReconciler) syncStatus(ctx context.Context, instance *v1alpha
 
 	_ = r.Status().Update(ctx, instance)
 
-	log.Info("Don't reconcile quarantine after sync.")
+	log.Info("Don't reconcile quarantine resource after sync.")
 	return ctrl.Result{}, nil
 }
 

@@ -1,6 +1,11 @@
 package quarantine
 
-import "github.com/soer3n/incident-operator/api/v1alpha1"
+import (
+	"github.com/soer3n/incident-operator/api/v1alpha1"
+)
+
+const DsType = "daemonset"
+const DeploymentType = "deployment"
 
 func (n Node) prepare() error {
 
@@ -30,6 +35,26 @@ func (n Node) update() error {
 }
 
 func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
+
+	for _, r := range rs {
+		switch t := r.Type; t {
+		case DsType:
+			for _, v := range n.Daemonsets {
+				if v.Name == r.Name && v.Namespace == r.Namespace {
+					continue
+				}
+				n.Daemonsets = append(n.Daemonsets, v)
+			}
+		case DeploymentType:
+			for _, v := range n.Deployments {
+				if v.Name == r.Name && v.Namespace == r.Namespace {
+					continue
+				}
+				n.Deployments = append(n.Deployments, v)
+			}
+		}
+	}
+
 	return nil
 }
 
