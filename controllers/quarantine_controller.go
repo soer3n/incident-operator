@@ -19,18 +19,23 @@ package controllers
 import (
 	"context"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/go-logr/logr"
+	"github.com/prometheus/common/log"
 
 	opsv1alpha1 "github.com/soer3n/incident-operator/api/v1alpha1"
+	"github.com/soer3n/incident-operator/internal/quarantine"
 )
 
 // QuarantineReconciler reconciles a Quarantine object
 type QuarantineReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Log    logr.Logger
 }
 
 //+kubebuilder:rbac:groups=ops.soer3n.info,resources=quarantines,verbs=get;list;watch;create;update;patch;delete
@@ -47,11 +52,42 @@ type QuarantineReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	reqLogger := r.Log.WithValues("repos", req.NamespacedName)
+	_ = r.Log.WithValues("reposreq", req)
 
-	// your logic here
+	// fetch app instance
+	instance := &opsv1alpha1.Quarantine{}
 
-	return ctrl.Result{}, nil
+	err := r.Get(ctx, req.NamespacedName, instance)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			log.Info("Quarantine resource not found. Ignoring since object must be deleted")
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		log.Error(err, "Failed to get Quarantine resource")
+		return ctrl.Result{}, err
+	}
+
+	var q *quarantine.Quarantine
+
+	if q, err = quarantine.New(instance); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if q.IsActive() {
+		reqLogger.Info("Quarantine already active. Updating it if needed.")
+		return ctrl.Result{}, q.Update()
+	}
+
+	if err := q.Prepare(); err != nil {
+		reqLogger.Info("preparing...")
+		return ctrl.Result{}, err
+	}
+
+	reqLogger.Info("starting...")
+	return ctrl.Result{}, q.Start()
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -29,7 +29,21 @@ type QuarantineSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Quarantine. Edit quarantine_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Nodes     []Node     `json:"nodes,omitempty"`
+	Debug     bool       `json:"debug,omitempty"`
+	Resources []Resource `json:"resources"`
+}
+
+type Node struct {
+	Name    string `json:"name"`
+	Isolate bool   `json:"isolate,omitempty"`
+	Rescale bool   `json:"rescale,omitempty"`
+}
+
+type Resource struct {
+	Type      string `json:"type,omitempty"`
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // QuarantineStatus defines the observed state of Quarantine

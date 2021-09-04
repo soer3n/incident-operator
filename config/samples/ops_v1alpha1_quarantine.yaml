@@ -3,9 +3,9 @@ kind: Quarantine
 metadata:
   name: quarantine-sample
 spec:
+  debug: false
   nodes:
   - name: worker1
-    debugPod: false
     isolate: false
     rescale: false # if machine-controller is present
   resources:
