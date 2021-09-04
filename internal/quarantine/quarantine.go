@@ -19,6 +19,8 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 		if err := temp.mergeResources(s.Spec.Resources); err != nil {
 			return &Quarantine{}, err
 		}
+
+		nodes = append(nodes, temp)
 	}
 
 	return &Quarantine{

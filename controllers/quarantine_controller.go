@@ -23,12 +23,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
 	"github.com/prometheus/common/log"
 
+	"github.com/soer3n/incident-operator/api/v1alpha1"
 	opsv1alpha1 "github.com/soer3n/incident-operator/api/v1alpha1"
 	"github.com/soer3n/incident-operator/internal/quarantine"
+	"github.com/soer3n/incident-operator/internal/utils"
 )
 
 // QuarantineReconciler reconciles a Quarantine object
@@ -88,6 +91,48 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	reqLogger.Info("starting...")
 	return ctrl.Result{}, q.Start()
+}
+
+func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, obj *quarantine.Quarantine) error {
+
+	isRepoMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
+	if isRepoMarkedToBeDeleted {
+		if err := obj.Stop(); err != nil {
+			return err
+		}
+
+		controllerutil.RemoveFinalizer(instance, "finalizer.quarantine.ops.soer3n.info")
+
+		if err := r.Update(context.Background(), instance); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	if utils.Contains(instance.GetFinalizers(), "finalizer.releases.helm.soer3n.info") {
+		if err := r.addFinalizer(instance); err != nil {
+			return err
+		}
+
+		if err := r.Update(context.Background(), instance); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *QuarantineReconciler) addFinalizer(q *v1alpha1.Quarantine) error {
+	log.Info("Adding Finalizer for the Quarantine Resource")
+	controllerutil.AddFinalizer(q, "quarantine.ops.soer3n.info")
+
+	// Update CR
+	if err := r.Update(context.TODO(), q); err != nil {
+		log.Error(err, "Failed to add finalizer to Quarantine resource")
+		return err
+	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
