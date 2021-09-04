@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,9 +30,10 @@ import (
 	"github.com/prometheus/common/log"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
-	opsv1alpha1 "github.com/soer3n/incident-operator/api/v1alpha1"
 	"github.com/soer3n/incident-operator/internal/quarantine"
 	"github.com/soer3n/incident-operator/internal/utils"
+	meta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // QuarantineReconciler reconciles a Quarantine object
@@ -55,11 +57,11 @@ type QuarantineReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
 func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	reqLogger := r.Log.WithValues("repos", req.NamespacedName)
-	_ = r.Log.WithValues("reposreq", req)
+	reqLogger := r.Log.WithValues("quarantines", req.NamespacedName)
+	_ = r.Log.WithValues("quarantinereq", req)
 
 	// fetch app instance
-	instance := &opsv1alpha1.Quarantine{}
+	instance := &v1alpha1.Quarantine{}
 
 	err := r.Get(ctx, req.NamespacedName, instance)
 
@@ -110,7 +112,7 @@ func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, ob
 		return nil
 	}
 
-	if utils.Contains(instance.GetFinalizers(), "finalizer.releases.helm.soer3n.info") {
+	if utils.Contains(instance.GetFinalizers(), "finalizer.quarantine.ops.soer3n.info") {
 		if err := r.addFinalizer(instance); err != nil {
 			return err
 		}
@@ -135,9 +137,24 @@ func (r *QuarantineReconciler) addFinalizer(q *v1alpha1.Quarantine) error {
 	return nil
 }
 
+func (r *QuarantineReconciler) syncStatus(ctx context.Context, instance *v1alpha1.Quarantine, stats metav1.ConditionStatus, reason, message string) (ctrl.Result, error) {
+
+	if meta.IsStatusConditionPresentAndEqual(instance.Status.Conditions, "synced", stats) && instance.Status.Conditions[0].Message == message {
+		return ctrl.Result{}, nil
+	}
+
+	condition := metav1.Condition{Type: "synced", Status: stats, LastTransitionTime: metav1.Time{Time: time.Now()}, Reason: reason, Message: message}
+	meta.SetStatusCondition(&instance.Status.Conditions, condition)
+
+	_ = r.Status().Update(ctx, instance)
+
+	log.Info("Don't reconcile quarantine after sync.")
+	return ctrl.Result{}, nil
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *QuarantineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&opsv1alpha1.Quarantine{}).
+		For(&v1alpha1.Quarantine{}).
 		Complete(r)
 }

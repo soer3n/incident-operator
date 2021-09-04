@@ -48,8 +48,7 @@ type Resource struct {
 
 // QuarantineStatus defines the observed state of Quarantine
 type QuarantineStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Conditions []metav1.Condition `json:"conditions"`
 }
 
 //+kubebuilder:object:root=true
