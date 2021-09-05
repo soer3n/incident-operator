@@ -37,6 +37,7 @@ import (
 )
 
 const QuarantineFinalizer = "finalizer.quarantine.ops.soer3n.info"
+const QuarantineStatusKey = "active"
 
 // QuarantineReconciler reconciles a Quarantine object
 type QuarantineReconciler struct {
@@ -141,11 +142,11 @@ func (r *QuarantineReconciler) addFinalizer(q *v1alpha1.Quarantine) error {
 
 func (r *QuarantineReconciler) syncStatus(ctx context.Context, instance *v1alpha1.Quarantine, stats metav1.ConditionStatus, reason, message string) (ctrl.Result, error) {
 
-	if meta.IsStatusConditionPresentAndEqual(instance.Status.Conditions, "synced", stats) && instance.Status.Conditions[0].Message == message {
+	if meta.IsStatusConditionPresentAndEqual(instance.Status.Conditions, QuarantineStatusKey, stats) && instance.Status.Conditions[0].Message == message {
 		return ctrl.Result{}, nil
 	}
 
-	condition := metav1.Condition{Type: "synced", Status: stats, LastTransitionTime: metav1.Time{Time: time.Now()}, Reason: reason, Message: message}
+	condition := metav1.Condition{Type: QuarantineStatusKey, Status: stats, LastTransitionTime: metav1.Time{Time: time.Now()}, Reason: reason, Message: message}
 	meta.SetStatusCondition(&instance.Status.Conditions, condition)
 
 	_ = r.Status().Update(ctx, instance)

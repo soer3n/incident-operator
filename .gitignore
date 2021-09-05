@@ -1,4 +1,5 @@
-
+okteto.yml
+*/okteto.yml
 # Binaries for programs and plugins
 *.exe
 *.exe~

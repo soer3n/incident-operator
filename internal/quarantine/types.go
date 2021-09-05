@@ -1,8 +1,9 @@
 package quarantine
 
 type Quarantine struct {
-	Nodes []*Node
-	Debug Debug
+	Nodes    []*Node
+	Debug    Debug
+	isActive bool
 }
 
 type Node struct {

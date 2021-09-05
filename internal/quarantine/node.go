@@ -2,6 +2,7 @@ package quarantine
 
 import (
 	"github.com/soer3n/incident-operator/api/v1alpha1"
+	"github.com/soer3n/yaho/pkg/client"
 )
 
 const DsType = "daemonset"
@@ -67,6 +68,7 @@ func (n Node) deschedulePods() error {
 }
 
 func (n Node) isAlreadyIsolated() bool {
+	_ = client.New()
 	return false
 }
 

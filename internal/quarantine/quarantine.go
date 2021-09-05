@@ -2,12 +2,22 @@ package quarantine
 
 import (
 	"github.com/soer3n/incident-operator/api/v1alpha1"
+	meta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const QuarantineLabelSelector = "quarantine"
+const QuarantineStatusActiveKey = "active"
+const QuarantineStatusActiveMessage = "success"
 
 func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 
+	q := &Quarantine{
+		Debug: Debug{
+			Enabled: s.Spec.Debug,
+		},
+		isActive: false,
+	}
 	nodes := []*Node{}
 
 	for _, n := range s.Spec.Nodes {
@@ -19,18 +29,20 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 		}
 
 		if err := temp.mergeResources(s.Spec.Resources); err != nil {
-			return &Quarantine{}, err
+			return q, err
 		}
 
 		nodes = append(nodes, temp)
 	}
 
-	return &Quarantine{
-		Nodes: nodes,
-		Debug: Debug{
-			Enabled: s.Spec.Debug,
-		},
-	}, nil
+	q.Nodes = nodes
+
+	if meta.IsStatusConditionPresentAndEqual(s.Status.Conditions, QuarantineStatusActiveKey, metav1.ConditionTrue) &&
+		s.Status.Conditions[0].Message == QuarantineStatusActiveMessage {
+		q.isActive = true
+	}
+
+	return q, nil
 }
 
 func (q *Quarantine) Prepare() error {
@@ -85,5 +97,5 @@ func (q *Quarantine) Stop() error {
 }
 
 func (q Quarantine) IsActive() bool {
-	return false
+	return q.isActive
 }
