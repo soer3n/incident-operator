@@ -1,6 +1,10 @@
 package quarantine
 
 import (
+	"context"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/soer3n/incident-operator/api/v1alpha1"
 	"github.com/soer3n/yaho/pkg/client"
 )
@@ -68,7 +72,13 @@ func (n Node) deschedulePods() error {
 }
 
 func (n Node) isAlreadyIsolated() bool {
-	_ = client.New()
+	opts := metav1.GetOptions{}
+	obj, err := client.New().TypedClient.CoreV1().Nodes().Get(context.Background(), n.Name, opts)
+
+	if err != nil {
+		return false
+	}
+
 	return false
 }
 

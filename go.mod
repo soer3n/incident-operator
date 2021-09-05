@@ -7,7 +7,7 @@ require (
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
 	github.com/prometheus/common v0.26.0
-	github.com/soer3n/yaho v0.0.0-20210905171542-5ed1c5987137
+	github.com/soer3n/yaho v0.0.0-20210905193644-9ee4140d4c74
 	k8s.io/apimachinery v0.21.2
 	k8s.io/client-go v1.5.2
 	sigs.k8s.io/controller-runtime v0.9.2
@@ -23,4 +23,5 @@ replace (
 	k8s.io/apimachinery => k8s.io/apimachinery v0.19.2
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.19.2
 	k8s.io/client-go => k8s.io/client-go v0.19.2
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.8.2
 )
