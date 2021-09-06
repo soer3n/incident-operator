@@ -3,6 +3,8 @@ package quarantine
 import (
 	"context"
 
+	"k8s.io/kubectl/pkg/cmd/drain"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
@@ -64,6 +66,13 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 }
 
 func (n Node) disableScheduling() error {
+
+	cordon := drain.NewDrainCmdOptions(n.factory, n.ioStreams)
+
+	if err := cordon.RunCordonOrUncordon(true); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -71,15 +80,16 @@ func (n Node) deschedulePods() error {
 	return nil
 }
 
-func (n Node) isAlreadyIsolated() bool {
+func (n Node) isAlreadyIsolated() (bool, error) {
+
 	opts := metav1.GetOptions{}
 	obj, err := client.New().TypedClient.CoreV1().Nodes().Get(context.Background(), n.Name, opts)
 
 	if err != nil {
-		return false
+		return obj.Spec.Unschedulable, err
 	}
 
-	return false
+	return obj.Spec.Unschedulable, nil
 }
 
 func (n Node) deploymentsNotEqual() bool {

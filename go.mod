@@ -9,7 +9,9 @@ require (
 	github.com/prometheus/common v0.26.0
 	github.com/soer3n/yaho v0.0.0-20210905193644-9ee4140d4c74
 	k8s.io/apimachinery v0.21.2
+	k8s.io/cli-runtime v0.20.4
 	k8s.io/client-go v1.5.2
+	k8s.io/kubectl v0.19.2
 	sigs.k8s.io/controller-runtime v0.9.2
 )
 

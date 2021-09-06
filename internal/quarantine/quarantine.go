@@ -1,7 +1,15 @@
 package quarantine
 
 import (
+	"os"
+
+	"github.com/prometheus/common/log"
+
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/kubectl/pkg/cmd/util"
+
 	"github.com/soer3n/incident-operator/api/v1alpha1"
+
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,6 +34,11 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 			Debug: Debug{
 				Enabled: s.Spec.Debug,
 			},
+			ioStreams: genericclioptions.IOStreams{
+				In:  os.Stdin,
+				Out: os.Stdout,
+			},
+			factory: util.NewFactory(genericclioptions.NewConfigFlags(false)),
 		}
 
 		if err := temp.mergeResources(s.Spec.Resources); err != nil {
@@ -54,7 +67,11 @@ func (q *Quarantine) Prepare() error {
 			}
 		}
 
-		if !n.isAlreadyIsolated() {
+		if ok, err := n.isAlreadyIsolated(); !ok {
+			if err != nil {
+				log.Info(err.Error())
+			}
+
 			if err := n.prepare(); err != nil {
 				return err
 			}

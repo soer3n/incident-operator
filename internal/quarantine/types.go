@@ -1,5 +1,10 @@
 package quarantine
 
+import (
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/kubectl/pkg/cmd/util"
+)
+
 type Quarantine struct {
 	Nodes    []*Node
 	Debug    Debug
@@ -11,6 +16,8 @@ type Node struct {
 	Debug       Debug
 	Daemonsets  []Daemonset
 	Deployments []Deployment
+	ioStreams   genericclioptions.IOStreams
+	factory     util.Factory
 }
 
 type Debug struct {
