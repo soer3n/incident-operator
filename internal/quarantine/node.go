@@ -22,7 +22,7 @@ func (n Node) prepare() error {
 
 	for _, ds := range n.Daemonsets {
 
-		if err := ds.isolatePod(client.New().TypedClient); err != nil {
+		if err := ds.isolatePod(client.New().TypedClient, n.isolate); err != nil {
 			return err
 		}
 	}

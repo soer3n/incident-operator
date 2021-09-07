@@ -10,13 +10,14 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func (ds Daemonset) isolatePod(c kubernetes.Interface) error {
+func (ds Daemonset) isolatePod(c kubernetes.Interface, isolatedNode bool) error {
 
 	var obj *v1.DaemonSet
 	var pods *corev1.PodList
 	var err error
 
 	getOpts := metav1.GetOptions{}
+	patchOpts := metav1.PatchOptions{}
 
 	// get affected daemonset
 	if obj, err = c.AppsV1().DaemonSets(ds.Namespace).Get(context.Background(), ds.Name, getOpts); err != nil {
@@ -32,20 +33,23 @@ func (ds Daemonset) isolatePod(c kubernetes.Interface) error {
 		return err
 	}
 
-	renderedLabels := ""
-	patch := []byte(`{"spec":{"template":{"metadata": {"labels": "` + renderedLabels + "" + `"}}}}`)
-	patchOpts := metav1.PatchOptions{}
+	if isolatedNode {
+		renderedLabels := ""
+		patch := []byte(`{"spec":{"template":{"metadata": {"labels": "` + renderedLabels + "" + `"}}}}`)
 
-	if _, err = c.CoreV1().Pods(ds.Namespace).Patch(context.Background(),
-		pods.Items[0].ObjectMeta.Name,
-		types.MergePatchType,
-		patch, patchOpts); err != nil {
-		return err
+		if _, err = c.CoreV1().Pods(ds.Namespace).Patch(context.Background(),
+			pods.Items[0].ObjectMeta.Name,
+			types.MergePatchType,
+			patch, patchOpts); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
-	patch = []byte(`{"spec":{"template":{"spec": {"tolerations": [{"key": "` + QuarantineTaintKey + `", "operator": "Equal", "value": "` + QuarantineTaintValue + `", "effect": "NoSchedule"}]}}}}`)
+	patch := []byte(`{"spec":{"template":{"spec": {"tolerations": [{"key": "` + QuarantineTaintKey + `", "operator": "Equal", "value": "` + QuarantineTaintValue + `", "effect": "NoSchedule"}]}}}}`)
 
-	if _, err = c.CoreV1().Pods(ds.Namespace).Patch(context.Background(),
+	if _, err = c.AppsV1().DaemonSets(ds.Namespace).Patch(context.Background(),
 		pods.Items[0].ObjectMeta.Name,
 		types.MergePatchType,
 		patch, patchOpts); err != nil {
