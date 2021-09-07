@@ -15,6 +15,8 @@ import (
 )
 
 const QuarantineLabelSelector = "quarantine"
+const QuarantineTaintKey = QuarantineLabelSelector
+const QuarantineTaintValue = "true"
 const QuarantineStatusActiveKey = "active"
 const QuarantineStatusActiveMessage = "success"
 
@@ -34,6 +36,7 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 			Debug: Debug{
 				Enabled: s.Spec.Debug,
 			},
+			isolate: n.Isolate,
 			ioStreams: genericclioptions.IOStreams{
 				In:  os.Stdin,
 				Out: os.Stdout,
@@ -87,6 +90,12 @@ func (q *Quarantine) Start() error {
 		if err := n.deschedulePods(); err != nil {
 			return err
 		}
+
+		if n.isolate {
+			if err := n.addTaint(); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -102,8 +111,6 @@ func (q *Quarantine) Update() error {
 
 			return nil
 		}
-
-		return nil
 	}
 
 	return nil

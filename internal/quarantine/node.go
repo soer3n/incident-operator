@@ -22,14 +22,14 @@ func (n Node) prepare() error {
 
 	for _, ds := range n.Daemonsets {
 
-		if err := ds.isolatePod(); err != nil {
+		if err := ds.isolatePod(client.New().TypedClient); err != nil {
 			return err
 		}
 	}
 
 	for _, d := range n.Deployments {
 
-		if err := d.isolatePod(); err != nil {
+		if err := d.isolatePod(client.New().TypedClient); err != nil {
 			return err
 		}
 	}
@@ -67,16 +67,43 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 
 func (n Node) disableScheduling() error {
 
-	cordon := drain.NewDrainCmdOptions(n.factory, n.ioStreams)
+	cordonOpts := drain.NewDrainCmdOptions(n.factory, n.ioStreams)
+	cmd := drain.NewCmdCordon(n.factory, n.ioStreams)
+	nodes := []string{
+		n.Name,
+	}
 
-	if err := cordon.RunCordonOrUncordon(true); err != nil {
+	if err := cordonOpts.Complete(n.factory, cmd, nodes); err != nil {
+		return err
+	}
+
+	if err := cordonOpts.RunCordonOrUncordon(true); err != nil {
 		return err
 	}
 
 	return nil
 }
 
+func (n Node) addTaint() error {
+	return nil
+}
+
 func (n Node) deschedulePods() error {
+
+	drainOpts := drain.NewDrainCmdOptions(n.factory, n.ioStreams)
+	cmd := drain.NewCmdDrain(n.factory, n.ioStreams)
+	nodes := []string{
+		n.Name,
+	}
+
+	if err := drainOpts.Complete(n.factory, cmd, nodes); err != nil {
+		return err
+	}
+
+	if err := drainOpts.RunDrain(); err != nil {
+		return err
+	}
+
 	return nil
 }
 

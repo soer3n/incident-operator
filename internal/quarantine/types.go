@@ -14,6 +14,7 @@ type Quarantine struct {
 type Node struct {
 	Name        string
 	Debug       Debug
+	isolate     bool
 	Daemonsets  []Daemonset
 	Deployments []Deployment
 	ioStreams   genericclioptions.IOStreams

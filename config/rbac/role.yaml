@@ -1,0 +1,34 @@
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - ops.soer3n.info
+  resources:
+  - quarantines
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ops.soer3n.info
+  resources:
+  - quarantines/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - ops.soer3n.info
+  resources:
+  - quarantines/status
+  verbs:
+  - get
+  - patch
+  - update
