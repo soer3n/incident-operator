@@ -5,11 +5,11 @@ metadata:
 spec:
   debug: false
   nodes:
-  - name: worker1
+  - name: mngt-mngt-pool-7c46bb775f-fghln
     isolate: false
     rescale: false # if machine-controller is present
-  resources:
-  - type: daemonset
-    name: ds-resource
-  - type: deployment
-    name: deployment-resource  
+  resources: []
+  #- type: daemonset
+  #  name: ds-resource
+  #- type: deployment
+  #  name: deployment-resource  

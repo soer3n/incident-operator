@@ -38,8 +38,9 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 			},
 			isolate: n.Isolate,
 			ioStreams: genericclioptions.IOStreams{
-				In:  os.Stdin,
-				Out: os.Stdout,
+				In:     os.Stdin,
+				Out:    os.Stdout,
+				ErrOut: os.Stdout,
 			},
 			factory: util.NewFactory(genericclioptions.NewConfigFlags(false)),
 		}

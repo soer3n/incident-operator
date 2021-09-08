@@ -13,6 +13,10 @@ import (
 
 const DsType = "daemonset"
 const DeploymentType = "deployment"
+const DrainIgnoreDaemonSetFlag = "--ignore-daemonsets"
+const DrainPodSelectorFlag = "--pod-selector"
+const DrainDisableEvictionFlag = "--disable-eviction"
+const DrainDeleteEmptyDirDataFlag = "--delete-emptdir-data"
 
 func (n Node) prepare() error {
 
@@ -92,11 +96,12 @@ func (n Node) deschedulePods() error {
 
 	drainOpts := drain.NewDrainCmdOptions(n.factory, n.ioStreams)
 	cmd := drain.NewCmdDrain(n.factory, n.ioStreams)
-	nodes := []string{
+	args := []string{
 		n.Name,
+		DrainIgnoreDaemonSetFlag,
 	}
 
-	if err := drainOpts.Complete(n.factory, cmd, nodes); err != nil {
+	if err := drainOpts.Complete(n.factory, cmd, args); err != nil {
 		return err
 	}
 
