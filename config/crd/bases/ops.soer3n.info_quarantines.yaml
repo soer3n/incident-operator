@@ -37,7 +37,16 @@ spec:
             description: QuarantineSpec defines the desired state of Quarantine
             properties:
               debug:
-                type: boolean
+                properties:
+                  enabled:
+                    type: boolean
+                  image:
+                    type: string
+                  namespace:
+                    type: string
+                required:
+                - enabled
+                type: object
               nodes:
                 description: Foo is an example field of Quarantine. Edit quarantine_types.go
                   to remove/update

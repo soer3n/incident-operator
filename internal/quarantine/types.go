@@ -3,6 +3,7 @@ package quarantine
 import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/kubectl/pkg/cmd/util"
+	"k8s.io/kubectl/pkg/drain"
 )
 
 type Quarantine struct {
@@ -19,22 +20,21 @@ type Node struct {
 	Deployments []Deployment
 	ioStreams   genericclioptions.IOStreams
 	factory     util.Factory
+	flags       *drain.Helper
 }
 
 type Debug struct {
-	Image   string
-	Enabled bool
+	Image     string
+	Namespace string
+	Enabled   bool
 }
 
-type resource struct {
+type Deployment struct {
 	Name      string
 	Namespace string
 }
 
-type Deployment struct {
-	resource
-}
-
 type Daemonset struct {
-	resource
+	Name      string
+	Namespace string
 }

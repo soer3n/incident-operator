@@ -1,6 +1,7 @@
 package quarantine
 
 import (
+	"errors"
 	"os"
 
 	"github.com/prometheus/common/log"
@@ -14,17 +15,31 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const QuarantineLabelSelector = "quarantine"
-const QuarantineTaintKey = QuarantineLabelSelector
+const QuarantinePodSelector = "quarantine"
+const QuarantineTaintKey = QuarantinePodSelector
 const QuarantineTaintValue = "true"
+const QuarantineTaintEffect = "NoExecute"
 const QuarantineStatusActiveKey = "active"
 const QuarantineStatusActiveMessage = "success"
 
 func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 
+	debugImage := debugPodImage
+	debugNamespace := debugPodNamespace
+
+	if s.Spec.Debug.Image != "" {
+		debugImage = s.Spec.Debug.Image
+	}
+
+	if s.Spec.Debug.Namespace != "" {
+		debugNamespace = s.Spec.Debug.Namespace
+	}
+
 	q := &Quarantine{
 		Debug: Debug{
-			Enabled: s.Spec.Debug,
+			Enabled:   s.Spec.Debug.Enabled,
+			Image:     debugImage,
+			Namespace: debugNamespace,
 		},
 		isActive: false,
 	}
@@ -34,7 +49,7 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 		temp := &Node{
 			Name: n.Name,
 			Debug: Debug{
-				Enabled: s.Spec.Debug,
+				Enabled: s.Spec.Debug.Enabled,
 			},
 			isolate: n.Isolate,
 			ioStreams: genericclioptions.IOStreams{
@@ -49,6 +64,7 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 			return q, err
 		}
 
+		temp.parseFlags()
 		nodes = append(nodes, temp)
 	}
 
@@ -66,7 +82,7 @@ func (q *Quarantine) Prepare() error {
 
 	for _, n := range q.Nodes {
 		if q.Debug.Enabled {
-			if err := q.Debug.deploy(n.Name); err != nil {
+			if err := q.Debug.deploy(n.flags.Client, n.Name); err != nil {
 				return err
 			}
 		}
@@ -91,12 +107,6 @@ func (q *Quarantine) Start() error {
 		if err := n.deschedulePods(); err != nil {
 			return err
 		}
-
-		if n.isolate {
-			if err := n.addTaint(); err != nil {
-				return err
-			}
-		}
 	}
 
 	return nil
@@ -105,12 +115,8 @@ func (q *Quarantine) Start() error {
 func (q *Quarantine) Update() error {
 
 	for _, n := range q.Nodes {
-		if n.daemonsetsNotEqual() || n.deploymentsNotEqual() {
-			if err := n.update(); err != nil {
-				return err
-			}
-
-			return nil
+		if err := n.update(); err != nil {
+			return err
 		}
 	}
 
@@ -118,6 +124,35 @@ func (q *Quarantine) Update() error {
 }
 
 func (q *Quarantine) Stop() error {
+
+	if len(q.Nodes) < 1 {
+		return errors.New("no nodes detected")
+	}
+
+	if err := q.Debug.remove(q.Nodes[0].flags.Client, debugPodName, q.Debug.Namespace); err != nil {
+		return err
+	}
+
+	for _, n := range q.Nodes {
+		if err := n.removeTaint(); err != nil {
+			return err
+		}
+
+		for _, ds := range n.Daemonsets {
+			if err := ds.removeToleration(n.flags.Client); err != nil {
+				return err
+			}
+		}
+
+		if err := n.enableScheduling(); err != nil {
+			return err
+		}
+	}
+
+	if err := cleanupIsolatedPods(q.Nodes[0].flags.Client); err != nil {
+		return err
+	}
+
 	return nil
 }
 

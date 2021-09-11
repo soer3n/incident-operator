@@ -10,49 +10,62 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func (ds Daemonset) isolatePod(c kubernetes.Interface, isolatedNode bool) error {
+func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode bool) error {
 
 	var obj *v1.DaemonSet
-	var pods *corev1.PodList
 	var err error
 
 	getOpts := metav1.GetOptions{}
-	patchOpts := metav1.PatchOptions{}
 
 	// get affected daemonset
-	if obj, err = c.AppsV1().DaemonSets(ds.Namespace).Get(context.Background(), ds.Name, getOpts); err != nil {
+	if obj, err = c.AppsV1().DaemonSets(ds.Namespace).Get(context.TODO(), ds.Name, getOpts); err != nil {
 		return err
 	}
 
-	// define selector for getting wanted pod
-	listOpts := metav1.ListOptions{
-		LabelSelector: obj.Spec.Selector.String(),
-	}
-
-	if pods, err = c.CoreV1().Pods(ds.Namespace).List(context.Background(), listOpts); err != nil {
+	if err = updatePod(c, obj.Spec.Selector.MatchLabels, node, ds.Namespace); err != nil {
 		return err
 	}
 
 	if isolatedNode {
-		renderedLabels := ""
-		patch := []byte(`{"spec":{"template":{"metadata": {"labels": "` + renderedLabels + "" + `"}}}}`)
+		patch := []byte(`{"spec":{"template":{"spec": {"tolerations": [{"key": "` + QuarantineTaintKey + `", "operator": "Equal", "value": "` + QuarantineTaintValue + `", "effect": "` + QuarantineTaintEffect + `"}]}}}}`)
 
-		if _, err = c.CoreV1().Pods(ds.Namespace).Patch(context.Background(),
-			pods.Items[0].ObjectMeta.Name,
+		if _, err = c.AppsV1().DaemonSets(ds.Namespace).Patch(context.Background(),
+			ds.Name,
 			types.MergePatchType,
-			patch, patchOpts); err != nil {
+			patch, metav1.PatchOptions{}); err != nil {
 			return err
 		}
 
 		return nil
 	}
+	return nil
+}
 
-	patch := []byte(`{"spec":{"template":{"spec": {"tolerations": [{"key": "` + QuarantineTaintKey + `", "operator": "Equal", "value": "` + QuarantineTaintValue + `", "effect": "NoSchedule"}]}}}}`)
+func (ds Daemonset) removeToleration(c kubernetes.Interface) error {
 
-	if _, err = c.AppsV1().DaemonSets(ds.Namespace).Patch(context.Background(),
-		pods.Items[0].ObjectMeta.Name,
-		types.MergePatchType,
-		patch, patchOpts); err != nil {
+	var obj *v1.DaemonSet
+	var err error
+
+	getOpts := metav1.GetOptions{}
+
+	// get affected daemonset
+	if obj, err = c.AppsV1().DaemonSets(ds.Namespace).Get(context.TODO(), ds.Name, getOpts); err != nil {
+		return err
+	}
+
+	tolerations := []corev1.Toleration{}
+
+	for _, t := range obj.Spec.Template.Spec.Tolerations {
+		if t.Value != QuarantineTaintValue && t.Key != QuarantineTaintKey {
+			tolerations = append(tolerations, t)
+		}
+	}
+
+	obj.Spec.Template.Spec.Tolerations = tolerations
+	updateOpts := metav1.UpdateOptions{}
+
+	// get affected daemonset
+	if _, err = c.AppsV1().DaemonSets(ds.Namespace).Update(context.TODO(), obj, updateOpts); err != nil {
 		return err
 	}
 

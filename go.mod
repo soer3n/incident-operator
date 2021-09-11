@@ -8,6 +8,7 @@ require (
 	github.com/onsi/gomega v1.13.0
 	github.com/prometheus/common v0.26.0
 	github.com/soer3n/yaho v0.0.0-20210905193644-9ee4140d4c74
+	github.com/spf13/pflag v1.0.5
 	k8s.io/api v0.20.4
 	k8s.io/apimachinery v0.21.2
 	k8s.io/cli-runtime v0.20.4

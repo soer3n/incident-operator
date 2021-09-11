@@ -3,7 +3,9 @@ package quarantine
 import (
 	"context"
 
-	"k8s.io/kubectl/pkg/cmd/drain"
+	corev1 "k8s.io/api/core/v1"
+
+	"k8s.io/kubectl/pkg/drain"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -13,29 +15,31 @@ import (
 
 const DsType = "daemonset"
 const DeploymentType = "deployment"
-const DrainIgnoreDaemonSetFlag = "--ignore-daemonsets"
-const DrainPodSelectorFlag = "--pod-selector"
-const DrainDisableEvictionFlag = "--disable-eviction"
-const DrainDeleteEmptyDirDataFlag = "--delete-emptdir-data"
 
 func (n Node) prepare() error {
 
-	if err := n.disableScheduling(); err != nil {
-		return err
-	}
-
 	for _, ds := range n.Daemonsets {
 
-		if err := ds.isolatePod(client.New().TypedClient, n.isolate); err != nil {
+		if err := ds.isolatePod(client.New().TypedClient, n.Name, n.isolate); err != nil {
 			return err
 		}
 	}
 
 	for _, d := range n.Deployments {
 
-		if err := d.isolatePod(client.New().TypedClient); err != nil {
+		if err := d.isolatePod(client.New().TypedClient, n.Name); err != nil {
 			return err
 		}
+	}
+
+	if n.isolate {
+		if err := n.addTaint(); err != nil {
+			return err
+		}
+	}
+
+	if err := n.disableScheduling(); err != nil {
+		return err
 	}
 
 	return nil
@@ -54,34 +58,71 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 				if v.Name == r.Name && v.Namespace == r.Namespace {
 					continue
 				}
-				n.Daemonsets = append(n.Daemonsets, v)
+				n.Daemonsets = append(n.Daemonsets, Daemonset{
+					Name:      r.Name,
+					Namespace: r.Namespace,
+				})
+
 			}
+
+			n.Daemonsets = append(n.Daemonsets, Daemonset{
+				Name:      r.Name,
+				Namespace: r.Namespace,
+			})
 		case DeploymentType:
 			for _, v := range n.Deployments {
 				if v.Name == r.Name && v.Namespace == r.Namespace {
 					continue
 				}
-				n.Deployments = append(n.Deployments, v)
+				n.Deployments = append(n.Deployments, Deployment{
+					Name:      r.Name,
+					Namespace: r.Namespace,
+				})
 			}
+
+			n.Deployments = append(n.Deployments, Deployment{
+				Name:      r.Name,
+				Namespace: r.Namespace,
+			})
 		}
 	}
 
 	return nil
 }
 
-func (n Node) disableScheduling() error {
-
-	cordonOpts := drain.NewDrainCmdOptions(n.factory, n.ioStreams)
-	cmd := drain.NewCmdCordon(n.factory, n.ioStreams)
-	nodes := []string{
-		n.Name,
+func (n *Node) parseFlags() {
+	n.flags = &drain.Helper{
+		IgnoreAllDaemonSets: false,
+		DisableEviction:     false,
+		PodSelector:         QuarantinePodSelector,
+		DeleteLocalData:     false,
+		Ctx:                 context.TODO(),
+		Client:              client.New().TypedClient,
+		ErrOut:              n.ioStreams.ErrOut,
+		Out:                 n.ioStreams.Out,
 	}
 
-	if err := cordonOpts.Complete(n.factory, cmd, nodes); err != nil {
+	if !n.isolate {
+		n.flags.IgnoreAllDaemonSets = true
+	}
+}
+
+func (n Node) disableScheduling() error {
+
+	nodeObj := n.getNodeAPIObject()
+
+	if err := drain.RunCordonOrUncordon(n.flags, nodeObj, true); err != nil {
 		return err
 	}
 
-	if err := cordonOpts.RunCordonOrUncordon(true); err != nil {
+	return nil
+}
+
+func (n Node) enableScheduling() error {
+
+	nodeObj := n.getNodeAPIObject()
+
+	if err := drain.RunCordonOrUncordon(n.flags, nodeObj, false); err != nil {
 		return err
 	}
 
@@ -89,23 +130,77 @@ func (n Node) disableScheduling() error {
 }
 
 func (n Node) addTaint() error {
+
+	nodeObj := n.getNodeAPIObject()
+
+	for _, taint := range nodeObj.Spec.Taints {
+		if taint.Key == QuarantineTaintKey && taint.Value == QuarantineTaintValue {
+			return nil
+		}
+	}
+
+	nodeObj.Spec.Taints = append(nodeObj.Spec.Taints, corev1.Taint{
+		Key:    QuarantineTaintKey,
+		Value:  QuarantineTaintValue,
+		Effect: QuarantineTaintEffect,
+	})
+
+	if err := n.updateNodeAPIObject(nodeObj); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (n Node) removeTaint() error {
+
+	nodeObj := n.getNodeAPIObject()
+	taints := []corev1.Taint{}
+
+	for _, taint := range nodeObj.Spec.Taints {
+		if taint.Key != QuarantineTaintKey && taint.Value != QuarantineTaintValue {
+			taints = append(taints, taint)
+		}
+	}
+
+	nodeObj.Spec.Taints = taints
+
+	if err := n.updateNodeAPIObject(nodeObj); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (n Node) deschedulePods() error {
-
-	drainOpts := drain.NewDrainCmdOptions(n.factory, n.ioStreams)
-	cmd := drain.NewCmdDrain(n.factory, n.ioStreams)
-	args := []string{
-		n.Name,
-		DrainIgnoreDaemonSetFlag,
-	}
-
-	if err := drainOpts.Complete(n.factory, cmd, args); err != nil {
+	if err := drain.RunNodeDrain(n.flags, n.Name); err != nil {
 		return err
 	}
 
-	if err := drainOpts.RunDrain(); err != nil {
+	return nil
+}
+
+func (n Node) getNodeAPIObject() *corev1.Node {
+
+	var err error
+	var nodeObj *corev1.Node
+
+	opts := metav1.GetOptions{}
+
+	if nodeObj, err = client.New().TypedClient.CoreV1().Nodes().Get(context.Background(), n.Name, opts); err != nil {
+		println(err.Error())
+	}
+
+	return nodeObj
+}
+
+func (n Node) updateNodeAPIObject(nodeObj *corev1.Node) error {
+
+	var err error
+
+	opts := metav1.UpdateOptions{}
+
+	if _, err = client.New().TypedClient.CoreV1().Nodes().Update(context.Background(), nodeObj, opts); err != nil {
 		return err
 	}
 
@@ -114,20 +209,6 @@ func (n Node) deschedulePods() error {
 
 func (n Node) isAlreadyIsolated() (bool, error) {
 
-	opts := metav1.GetOptions{}
-	obj, err := client.New().TypedClient.CoreV1().Nodes().Get(context.Background(), n.Name, opts)
-
-	if err != nil {
-		return obj.Spec.Unschedulable, err
-	}
-
-	return obj.Spec.Unschedulable, nil
-}
-
-func (n Node) deploymentsNotEqual() bool {
-	return false
-}
-
-func (n Node) daemonsetsNotEqual() bool {
-	return false
+	nodeObj := n.getNodeAPIObject()
+	return nodeObj.Spec.Unschedulable, nil
 }

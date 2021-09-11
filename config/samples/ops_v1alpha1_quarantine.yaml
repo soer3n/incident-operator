@@ -6,10 +6,11 @@ spec:
   debug: false
   nodes:
   - name: mngt-mngt-pool-7c46bb775f-fghln
-    isolate: false
+    isolate: true
     rescale: false # if machine-controller is present
-  resources: []
-  #- type: daemonset
-  #  name: ds-resource
+  resources:
+  - type: daemonset
+    name: loki-stack-promtail
+    namespace: loki-stack
   #- type: deployment
   #  name: deployment-resource  

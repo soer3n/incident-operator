@@ -30,7 +30,7 @@ type QuarantineSpec struct {
 
 	// Foo is an example field of Quarantine. Edit quarantine_types.go to remove/update
 	Nodes     []Node     `json:"nodes,omitempty"`
-	Debug     bool       `json:"debug,omitempty"`
+	Debug     Debug      `json:"debug,omitempty"`
 	Resources []Resource `json:"resources"`
 }
 
@@ -43,6 +43,12 @@ type Node struct {
 type Resource struct {
 	Type      string `json:"type,omitempty"`
 	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+}
+
+type Debug struct {
+	Enabled   bool   `json:"enabled"`
+	Image     string `json:"image,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
 }
 
