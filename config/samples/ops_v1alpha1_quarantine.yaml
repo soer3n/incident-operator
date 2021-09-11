@@ -3,7 +3,9 @@ kind: Quarantine
 metadata:
   name: quarantine-sample
 spec:
-  debug: false
+  debug:
+    enabled: true
+    image: nicolaka/netshoot
   nodes:
   - name: mngt-mngt-pool-7c46bb775f-fghln
     isolate: true
