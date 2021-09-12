@@ -1,6 +1,7 @@
 
 # Incident operator
 
+This operator is for managing incidents in clusters by controllers and custom resources. For now the only implementation is for setting nodes in quarantine with isolating pod from workloads and debugging affected nodes by a deployed pod.
 
 ## Installation
 
@@ -35,9 +36,10 @@ make run
 
 ## Architecture
 
-[Here](docs/ARCHITECTURE.md) is an explanation how the operator works and a comparison between the operator and helm usage on your workstation or somewhere else.
+[Here](docs/ARCHITECTURE.md) is an explanation how the operator works.
 
 ## Usage
+[Here](docs/USAGE.md) is an explanation how the operator can be used.
 
 ## License
 [LICENSE](LICENSE)

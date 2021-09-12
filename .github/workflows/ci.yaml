@@ -63,7 +63,7 @@ jobs:
         node_image: kindest/node:${{ matrix.version }}
         cluster_name:  cluster-${{ matrix.version }}
     - name: test controllers
-      run: go test -v ./controllers/...
+      run: ACK_GINKGO_DEPRECATIONS=1.16.4 go test -v ./controllers/...
   
   coverage:
     runs-on: ubuntu-latest
@@ -81,7 +81,7 @@ jobs:
       with:
         node_image: kindest/node:v1.20.7
     - name: run coverage
-      run: go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+      run: ACK_GINKGO_DEPRECATIONS=1.16.4 go test -race -coverprofile=coverage.txt -covermode=atomic ./...
     - name: report coverage
       uses: codecov/codecov-action@v1
       with:
