@@ -1,0 +1,47 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: incident-controller-manager
+  labels:
+    control-plane: incident-controller-manager
+spec:
+  selector:
+    matchLabels:
+      control-plane: incident-controller-manager
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        control-plane: incident-controller-manager
+    spec:
+      imagePullSecrets:
+      - name: harbor-registry-secret
+      serviceAccountName: iop
+      securityContext:
+        runAsUser: 65532
+      containers:
+      - image: ${IMG}
+        name: incident-manager
+        securityContext:
+          allowPrivilegeEscalation: false
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 100m
+            memory: 300Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+      terminationGracePeriodSeconds: 10
