@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -27,9 +28,9 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
-	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -52,11 +53,12 @@ func TestAPIs(t *testing.T) {
 
 	RunSpecsWithDefaultAndCustomReporters(t,
 		"Controller Suite",
-		[]Reporter{printer.NewlineReporter{}})
+		[]Reporter{})
 }
 
-var _ = BeforeSuite(func() {
+var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -76,6 +78,29 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+
+	logf.Log.Info("namespace:", "namespace", "default")
+
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{Scheme: scheme.Scheme})
+	Expect(err).NotTo(HaveOccurred(), "failed to create manager")
+
+	err = (&QuarantineReconciler{
+		Client: mgr.GetClient(),
+		Log:    logf.Log,
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred(), "failed to setup controller")
+
+	go func() {
+		err := mgr.Start(ctrl.SetupSignalHandler())
+		Expect(err).NotTo(HaveOccurred(), "failed to start incident manager")
+	}()
+
+	testClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(testClient).NotTo(BeNil())
+
+	close(done)
 
 }, 60)
 

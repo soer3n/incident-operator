@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,7 +17,7 @@ import (
 var quarantineKind *v1alpha1.Quarantine
 
 const quarantineKindName = "quarantine"
-const quarantineNodeName = "worker2"
+const quarantineNodeName = "dev-cluster-worker2"
 
 var _ = Context("Create a quarantine resource", func() {
 
@@ -57,6 +58,12 @@ var _ = Context("Create a quarantine resource", func() {
 			err = testClient.Create(context.Background(), quarantineKind)
 			Expect(err).NotTo(HaveOccurred(), "failed to create quarantine resource")
 
+			deployment := &v1alpha1.Quarantine{}
+
+			Eventually(
+				GetResourceFunc(context.Background(), client.ObjectKey{Name: quarantineKindName, Namespace: namespace}, deployment),
+				time.Second*20, time.Millisecond*1500).Should(BeNil())
+
 			By("should remove this quarantine resource with the specified name")
 
 			err = testClient.Delete(context.Background(), quarantineKind)
@@ -70,6 +77,10 @@ var _ = Context("Create a quarantine resource", func() {
 
 			err = testClient.Delete(context.Background(), quarantineNamespace)
 			Expect(err).NotTo(HaveOccurred(), "failed to delete namespace for testing")
+
+			Eventually(
+				GetResourceFunc(context.Background(), client.ObjectKey{Name: quarantineKindName, Namespace: namespace}, deployment),
+				time.Second*20, time.Millisecond*1500).ShouldNot(BeNil())
 		})
 	})
 })
