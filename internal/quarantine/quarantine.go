@@ -41,7 +41,8 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 			Image:     debugImage,
 			Namespace: debugNamespace,
 		},
-		isActive: false,
+		isActive:   false,
+		conditions: s.Status.Conditions,
 	}
 	nodes := []*Node{}
 
@@ -49,7 +50,9 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 		temp := &Node{
 			Name: n.Name,
 			Debug: Debug{
-				Enabled: s.Spec.Debug.Enabled,
+				Enabled:   s.Spec.Debug.Enabled,
+				Image:     debugImage,
+				Namespace: debugNamespace,
 			},
 			isolate: n.Isolate,
 			ioStreams: genericclioptions.IOStreams{
@@ -70,8 +73,7 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 
 	q.Nodes = nodes
 
-	if meta.IsStatusConditionPresentAndEqual(s.Status.Conditions, QuarantineStatusActiveKey, metav1.ConditionTrue) &&
-		s.Status.Conditions[0].Message == QuarantineStatusActiveMessage {
+	if len(s.Status.Conditions) > 0 {
 		q.isActive = true
 	}
 
@@ -113,6 +115,12 @@ func (q *Quarantine) Start() error {
 }
 
 func (q *Quarantine) Update() error {
+
+	// limit update to fix failed reconciles
+	if meta.IsStatusConditionPresentAndEqual(q.conditions, QuarantineStatusActiveKey, metav1.ConditionTrue) &&
+		q.conditions[0].Message == QuarantineStatusActiveMessage {
+		return nil
+	}
 
 	for _, n := range q.Nodes {
 		if err := n.update(); err != nil {

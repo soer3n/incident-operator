@@ -17,11 +17,18 @@ const debugPodContainerName = "debug"
 func (dg Debug) deploy(c kubernetes.Interface, nodeName string) error {
 	var err error
 
+	getOpts := metav1.GetOptions{}
+
+	if _, err = c.CoreV1().Pods(dg.Namespace).Get(context.TODO(), debugPodName, getOpts); err == nil {
+		return nil
+	}
+
 	autoMountToken := new(bool)
 	*autoMountToken = false
 	debugPod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: debugPodName,
+			Name:   debugPodName,
+			Labels: map[string]string{},
 		},
 		Spec: corev1.PodSpec{
 			AutomountServiceAccountToken: autoMountToken,
@@ -41,10 +48,29 @@ func (dg Debug) deploy(c kubernetes.Interface, nodeName string) error {
 					Image: debugPodImage,
 					Stdin: true,
 					TTY:   true,
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "host-system",
+							ReadOnly:  true,
+							MountPath: "/host",
+						},
+					},
+				},
+			},
+			Volumes: []corev1.Volume{
+				{
+					Name: "host-system",
+					VolumeSource: corev1.VolumeSource{
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: "/",
+						},
+					},
 				},
 			},
 		},
 	}
+
+	debugPod.ObjectMeta.Labels[QuarantinePodLabelKey] = QuarantinePodLabelValue
 	createOpts := metav1.CreateOptions{}
 
 	if _, err = c.CoreV1().Pods(dg.Namespace).Create(context.TODO(), debugPod, createOpts); err != nil {
@@ -56,9 +82,17 @@ func (dg Debug) deploy(c kubernetes.Interface, nodeName string) error {
 
 func (dg Debug) remove(c kubernetes.Interface, name, namespace string) error {
 
+	var err error
+
+	getOpts := metav1.GetOptions{}
+
+	if _, err = c.CoreV1().Pods(namespace).Get(context.TODO(), name, getOpts); err != nil {
+		return nil
+	}
+
 	deleteOpts := metav1.DeleteOptions{}
 
-	if err := c.CoreV1().Pods(namespace).Delete(context.TODO(), name, deleteOpts); err != nil {
+	if err = c.CoreV1().Pods(namespace).Delete(context.TODO(), name, deleteOpts); err != nil {
 		return err
 	}
 

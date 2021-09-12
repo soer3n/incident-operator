@@ -84,14 +84,14 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if r.handleFinalizer(instance, q, reqLogger); err != nil {
-		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "finalizer", "cannot manage finalizer")
+		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "finalizer", err.Error())
 	}
 
 	if q.IsActive() {
 		reqLogger.Info("Quarantine already active. Update if needed.")
 
 		if err := q.Update(); err != nil {
-			return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "update", "failed to update quarantine")
+			return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "update", err.Error())
 		}
 
 		return ctrl.Result{}, nil
@@ -100,13 +100,13 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	reqLogger.Info("preparing...")
 
 	if err := q.Prepare(); err != nil {
-		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "prepare", "failed to prepare quarantine")
+		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "prepare", err.Error())
 	}
 
 	reqLogger.Info("starting...")
 
 	if err := q.Start(); err != nil {
-		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "starting", "cannot start quarantine")
+		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "starting", err.Error())
 	}
 
 	return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionTrue, "running", "success")

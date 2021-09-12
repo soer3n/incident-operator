@@ -92,18 +92,15 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 
 func (n *Node) parseFlags() {
 	n.flags = &drain.Helper{
-		IgnoreAllDaemonSets: false,
+		IgnoreAllDaemonSets: true,
 		DisableEviction:     false,
-		PodSelector:         QuarantinePodSelector,
+		PodSelector:         "!" + QuarantinePodSelector,
 		DeleteLocalData:     false,
+		Force:               false,
 		Ctx:                 context.TODO(),
 		Client:              client.New().TypedClient,
 		ErrOut:              n.ioStreams.ErrOut,
 		Out:                 n.ioStreams.Out,
-	}
-
-	if !n.isolate {
-		n.flags.IgnoreAllDaemonSets = true
 	}
 }
 
