@@ -59,8 +59,8 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 					continue
 				}
 				n.Daemonsets = append(n.Daemonsets, Daemonset{
-					Name:      r.Name,
-					Namespace: r.Namespace,
+					Name:      v.Name,
+					Namespace: v.Namespace,
 				})
 
 			}
@@ -75,8 +75,8 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 					continue
 				}
 				n.Deployments = append(n.Deployments, Deployment{
-					Name:      r.Name,
-					Namespace: r.Namespace,
+					Name:      v.Name,
+					Namespace: v.Namespace,
 				})
 			}
 
