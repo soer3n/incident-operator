@@ -70,7 +70,7 @@ func (dg Debug) deploy(c kubernetes.Interface, nodeName string) error {
 		},
 	}
 
-	debugPod.ObjectMeta.Labels[QuarantinePodLabelKey] = QuarantinePodLabelValue
+	debugPod.ObjectMeta.Labels[quarantinePodLabelKey] = quarantinePodLabelValue
 	createOpts := metav1.CreateOptions{}
 
 	if _, err = c.CoreV1().Pods(dg.Namespace).Create(context.TODO(), debugPod, createOpts); err != nil {

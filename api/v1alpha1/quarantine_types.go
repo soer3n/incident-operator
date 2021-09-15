@@ -42,7 +42,7 @@ type Node struct {
 	Rescale bool   `json:"rescale,omitempty"`
 }
 
-// Resrouce defines a workload to isolate on a node
+// Resource defines a workload to isolate on a node
 type Resource struct {
 	Type      string `json:"type,omitempty"`
 	Name      string `json:"name,omitempty"`

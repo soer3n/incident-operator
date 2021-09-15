@@ -105,7 +105,7 @@ func (q *Quarantine) Prepare() error {
 	return nil
 }
 
-// start represents the tasks to start isolating resources on nodes
+// Start represents the tasks to start isolating resources on nodes
 func (q *Quarantine) Start() error {
 
 	for _, n := range q.Nodes {

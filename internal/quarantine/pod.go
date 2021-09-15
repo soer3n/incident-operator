@@ -10,8 +10,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const QuarantinePodLabelKey = "quarantine"
-const QuarantinePodLabelValue = "true"
+const quarantinePodLabelKey = "quarantine"
+const quarantinePodLabelValue = "true"
 
 func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName, namespace string) error {
 
@@ -43,7 +43,7 @@ func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName
 				labels[k] = quarantinePodSelector
 			}
 
-			labels[QuarantinePodLabelKey] = QuarantinePodLabelValue
+			labels[quarantinePodLabelKey] = quarantinePodLabelValue
 
 			pod.ObjectMeta.Labels = labels
 			pod.Spec.Tolerations = append(pod.Spec.Tolerations, corev1.Toleration{
@@ -67,7 +67,7 @@ func cleanupIsolatedPods(c kubernetes.Interface) error {
 	var err error
 
 	listOpts := metav1.ListOptions{
-		LabelSelector: QuarantinePodLabelKey + "=" + QuarantinePodLabelValue,
+		LabelSelector: quarantinePodLabelKey + "=" + quarantinePodLabelValue,
 	}
 
 	if pods, err = c.CoreV1().Pods("").List(context.TODO(), listOpts); err != nil {

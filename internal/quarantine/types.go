@@ -7,6 +7,7 @@ import (
 	"k8s.io/kubectl/pkg/drain"
 )
 
+// Quarantine represents current state of isolation
 type Quarantine struct {
 	Nodes      []*Node
 	Debug      Debug
