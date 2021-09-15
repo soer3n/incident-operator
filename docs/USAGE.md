@@ -29,7 +29,7 @@ loki-stack-promtail-wrkjx   1/1     Running   0          2d    xx.xx.xx.xx   mng
 
 ## start the quarantine
 
-For a detailed explanation of configurable fields go to [components](docs/COMPONENTS.md). After applying quarantine resource file from [examples](examples/basic.yaml) one worker node will be cordoned, the pod of the daemonset on the configured nodes will be relabeled to isolate, a debug pod will be deployed, a toleration will be added to the daemonset, a taint will be added to cordoned node and at the end the node will be drained. 
+For a detailed explanation of configurable fields go to [components](COMPONENTS.md). After applying quarantine resource file from [examples](../examples/basic.yaml) one worker node will be cordoned, the pod of the daemonset on the configured nodes will be relabeled to isolate, a debug pod will be deployed, a toleration will be added to the daemonset, a taint will be added to cordoned node and at the end the node will be drained. 
 
 ```
 
