@@ -15,6 +15,7 @@ type Quarantine struct {
 	conditions []metav1.Condition
 }
 
+// Node represents configuration for isolating a node
 type Node struct {
 	Name        string
 	Debug       Debug
@@ -26,17 +27,20 @@ type Node struct {
 	flags       *drain.Helper
 }
 
+// Debug represents a configuration for a debug pod
 type Debug struct {
 	Image     string
 	Namespace string
 	Enabled   bool
 }
 
+// Deployment represents a configuration for a deployment whose pod which is on an affected node should be isolated
 type Deployment struct {
 	Name      string
 	Namespace string
 }
 
+// Daemonset represents a configuration for a daemonset whose pod which is on an affected node should be isolated
 type Daemonset struct {
 	Name      string
 	Namespace string
