@@ -13,8 +13,8 @@ import (
 	"github.com/soer3n/yaho/pkg/client"
 )
 
-const DsType = "daemonset"
-const DeploymentType = "deployment"
+const dsType = "daemonset"
+const deploymentType = "deployment"
 
 func (n Node) prepare() error {
 
@@ -53,7 +53,7 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 
 	for _, r := range rs {
 		switch t := r.Type; t {
-		case DsType:
+		case dsType:
 			for _, v := range n.Daemonsets {
 				if v.Name == r.Name && v.Namespace == r.Namespace {
 					continue
@@ -69,7 +69,7 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 				Name:      r.Name,
 				Namespace: r.Namespace,
 			})
-		case DeploymentType:
+		case deploymentType:
 			for _, v := range n.Deployments {
 				if v.Name == r.Name && v.Namespace == r.Namespace {
 					continue
@@ -94,7 +94,7 @@ func (n *Node) parseFlags() {
 	n.flags = &drain.Helper{
 		IgnoreAllDaemonSets: true,
 		DisableEviction:     false,
-		PodSelector:         "!" + QuarantinePodSelector,
+		PodSelector:         "!" + quarantinePodSelector,
 		DeleteLocalData:     false,
 		Force:               false,
 		Ctx:                 context.TODO(),
@@ -131,15 +131,15 @@ func (n Node) addTaint() error {
 	nodeObj := n.getNodeAPIObject()
 
 	for _, taint := range nodeObj.Spec.Taints {
-		if taint.Key == QuarantineTaintKey && taint.Value == QuarantineTaintValue {
+		if taint.Key == quarantineTaintKey && taint.Value == quarantineTaintValue {
 			return nil
 		}
 	}
 
 	nodeObj.Spec.Taints = append(nodeObj.Spec.Taints, corev1.Taint{
-		Key:    QuarantineTaintKey,
-		Value:  QuarantineTaintValue,
-		Effect: QuarantineTaintEffect,
+		Key:    quarantineTaintKey,
+		Value:  quarantineTaintValue,
+		Effect: quarantineTaintEffect,
 	})
 
 	if err := n.updateNodeAPIObject(nodeObj); err != nil {
@@ -155,7 +155,7 @@ func (n Node) removeTaint() error {
 	taints := []corev1.Taint{}
 
 	for _, taint := range nodeObj.Spec.Taints {
-		if taint.Key != QuarantineTaintKey && taint.Value != QuarantineTaintValue {
+		if taint.Key != quarantineTaintKey && taint.Value != quarantineTaintValue {
 			taints = append(taints, taint)
 		}
 	}

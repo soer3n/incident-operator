@@ -37,9 +37,9 @@ func (dg Debug) deploy(c kubernetes.Interface, nodeName string) error {
 			NodeName:                     nodeName,
 			Tolerations: []corev1.Toleration{
 				{
-					Key:    QuarantineTaintKey,
-					Value:  QuarantineTaintValue,
-					Effect: QuarantineTaintEffect,
+					Key:    quarantineTaintKey,
+					Value:  quarantineTaintValue,
+					Effect: quarantineTaintEffect,
 				},
 			},
 			Containers: []corev1.Container{

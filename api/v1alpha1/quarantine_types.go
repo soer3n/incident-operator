@@ -35,18 +35,21 @@ type QuarantineSpec struct {
 	Resources []Resource `json:"resources"`
 }
 
+// Node defines a configuration for node to isolate
 type Node struct {
 	Name    string `json:"name"`
 	Isolate bool   `json:"isolate,omitempty"`
 	Rescale bool   `json:"rescale,omitempty"`
 }
 
+// Resrouce defines a workload to isolate on a node
 type Resource struct {
 	Type      string `json:"type,omitempty"`
 	Name      string `json:"name,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
 }
 
+// Debug defines a debug pod configuration
 type Debug struct {
 	Enabled   bool   `json:"enabled"`
 	Image     string `json:"image,omitempty"`

@@ -15,13 +15,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const QuarantinePodSelector = "quarantine"
-const QuarantineTaintKey = QuarantinePodSelector
-const QuarantineTaintValue = "true"
-const QuarantineTaintEffect = "NoExecute"
-const QuarantineStatusActiveKey = "active"
-const QuarantineStatusActiveMessage = "success"
+const quarantinePodSelector = "quarantine"
+const quarantineTaintKey = quarantinePodSelector
+const quarantineTaintValue = "true"
+const quarantineTaintEffect = "NoExecute"
+const quarantineStatusActiveKey = "active"
+const quarantineStatusActiveMessage = "success"
 
+// New represents an initialization of a quarantine struct
 func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 
 	debugImage := debugPodImage
@@ -80,6 +81,7 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 	return q, nil
 }
 
+// Prepare represents the tasks before a quarantine can be started
 func (q *Quarantine) Prepare() error {
 
 	for _, n := range q.Nodes {
@@ -103,6 +105,7 @@ func (q *Quarantine) Prepare() error {
 	return nil
 }
 
+// start represents the tasks to start isolating resources on nodes
 func (q *Quarantine) Start() error {
 
 	for _, n := range q.Nodes {
@@ -114,11 +117,12 @@ func (q *Quarantine) Start() error {
 	return nil
 }
 
+// Update represents the tasks which are not yet executed
 func (q *Quarantine) Update() error {
 
 	// limit update to fix failed reconciles
-	if meta.IsStatusConditionPresentAndEqual(q.conditions, QuarantineStatusActiveKey, metav1.ConditionTrue) &&
-		q.conditions[0].Message == QuarantineStatusActiveMessage {
+	if meta.IsStatusConditionPresentAndEqual(q.conditions, quarantineStatusActiveKey, metav1.ConditionTrue) &&
+		q.conditions[0].Message == quarantineStatusActiveMessage {
 		return nil
 	}
 
@@ -131,6 +135,7 @@ func (q *Quarantine) Update() error {
 	return nil
 }
 
+// Stop represents the tasks for uncordon nodes, rescheduling resources and deleting debug resources
 func (q *Quarantine) Stop() error {
 
 	if len(q.Nodes) < 1 {
@@ -164,6 +169,7 @@ func (q *Quarantine) Stop() error {
 	return nil
 }
 
+// IsActive represents returning state of a quarantine
 func (q Quarantine) IsActive() bool {
 	return q.isActive
 }

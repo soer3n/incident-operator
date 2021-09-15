@@ -36,8 +36,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const QuarantineFinalizer = "finalizer.quarantine.ops.soer3n.info"
-const QuarantineStatusKey = "active"
+const quarantineFinalizer = "finalizer.quarantine.ops.soer3n.info"
+const quarantineStatusKey = "active"
 
 // QuarantineReconciler reconciles a Quarantine object
 type QuarantineReconciler struct {
@@ -121,7 +121,7 @@ func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, ob
 			return err
 		}
 
-		controllerutil.RemoveFinalizer(instance, QuarantineFinalizer)
+		controllerutil.RemoveFinalizer(instance, quarantineFinalizer)
 
 		if err := r.Update(context.Background(), instance); err != nil {
 			return err
@@ -130,7 +130,7 @@ func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, ob
 		return nil
 	}
 
-	if !utils.Contains(instance.GetFinalizers(), QuarantineFinalizer) {
+	if !utils.Contains(instance.GetFinalizers(), quarantineFinalizer) {
 		reqLogger.Info("Adding Finalizer for the Quarantine Resource")
 		if err := r.addFinalizer(instance); err != nil {
 			reqLogger.Error(err, "Failed to add finalizer to Quarantine resource")
@@ -147,7 +147,7 @@ func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, ob
 
 func (r *QuarantineReconciler) addFinalizer(q *v1alpha1.Quarantine) error {
 
-	controllerutil.AddFinalizer(q, QuarantineFinalizer)
+	controllerutil.AddFinalizer(q, quarantineFinalizer)
 
 	// Update CR
 	if err := r.Update(context.TODO(), q); err != nil {
@@ -158,11 +158,11 @@ func (r *QuarantineReconciler) addFinalizer(q *v1alpha1.Quarantine) error {
 
 func (r *QuarantineReconciler) syncStatus(ctx context.Context, instance *v1alpha1.Quarantine, reqLogger logr.Logger, stats metav1.ConditionStatus, reason, message string) (ctrl.Result, error) {
 
-	if meta.IsStatusConditionPresentAndEqual(instance.Status.Conditions, QuarantineStatusKey, stats) && instance.Status.Conditions[0].Message == message {
+	if meta.IsStatusConditionPresentAndEqual(instance.Status.Conditions, quarantineStatusKey, stats) && instance.Status.Conditions[0].Message == message {
 		return ctrl.Result{}, nil
 	}
 
-	condition := metav1.Condition{Type: QuarantineStatusKey, Status: stats, LastTransitionTime: metav1.Time{Time: time.Now()}, Reason: reason, Message: message}
+	condition := metav1.Condition{Type: quarantineStatusKey, Status: stats, LastTransitionTime: metav1.Time{Time: time.Now()}, Reason: reason, Message: message}
 	meta.SetStatusCondition(&instance.Status.Conditions, condition)
 
 	_ = r.Status().Update(ctx, instance)

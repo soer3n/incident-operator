@@ -36,7 +36,7 @@ make run
 
 ## Architecture
 
-[Here](docs/ARCHITECTURE.md) is an explanation how the operator works.
+[Here](docs/COMPONENTS.md) is an explanation how the operator works.
 
 ## Usage
 [Here](docs/USAGE.md) is an explanation how the operator can be used.

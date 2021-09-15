@@ -27,7 +27,7 @@ func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode
 	}
 
 	if isolatedNode {
-		patch := []byte(`{"spec":{"template":{"spec": {"tolerations": [{"key": "` + QuarantineTaintKey + `", "operator": "Equal", "value": "` + QuarantineTaintValue + `", "effect": "` + QuarantineTaintEffect + `"}]}}}}`)
+		patch := []byte(`{"spec":{"template":{"spec": {"tolerations": [{"key": "` + quarantineTaintKey + `", "operator": "Equal", "value": "` + quarantineTaintValue + `", "effect": "` + quarantineTaintEffect + `"}]}}}}`)
 
 		if _, err = c.AppsV1().DaemonSets(ds.Namespace).Patch(context.Background(),
 			ds.Name,
@@ -56,7 +56,7 @@ func (ds Daemonset) removeToleration(c kubernetes.Interface) error {
 	tolerations := []corev1.Toleration{}
 
 	for _, t := range obj.Spec.Template.Spec.Tolerations {
-		if t.Value != QuarantineTaintValue && t.Key != QuarantineTaintKey {
+		if t.Value != quarantineTaintValue && t.Key != quarantineTaintKey {
 			tolerations = append(tolerations, t)
 		}
 	}
