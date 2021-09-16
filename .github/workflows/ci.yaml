@@ -61,6 +61,7 @@ jobs:
       uses: helm/kind-action@v1.2.0
       with:
         node_image: kindest/node:${{ matrix.version }}
+        cluster_name: dev-cluster
         config: .github/kind.yaml
     - name: test controllers
       run: ACK_GINKGO_DEPRECATIONS=1.16.4 go test -v ./controllers/...
