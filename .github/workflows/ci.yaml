@@ -61,33 +61,9 @@ jobs:
       uses: helm/kind-action@v1.2.0
       with:
         node_image: kindest/node:${{ matrix.version }}
-        cluster_name:  cluster-${{ matrix.version }}
+        config: .github/kind.yaml
     - name: test controllers
       run: ACK_GINKGO_DEPRECATIONS=1.16.4 go test -v ./controllers/...
-  
-  coverage:
-    runs-on: ubuntu-latest
-    needs:
-    - test-unit
-    - test-k8s
-    steps:
-    - uses: actions/checkout@v2
-    - name: set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16
-    - name: create k8s Kind cluster
-      uses: helm/kind-action@v1.2.0
-      with:
-        node_image: kindest/node:v1.20.7
-    - name: run coverage
-      run: ACK_GINKGO_DEPRECATIONS=1.16.4 go test -race -coverprofile=coverage.txt -covermode=atomic ./...
-    - name: report coverage
-      uses: codecov/codecov-action@v1
-      with:
-        token: 18c8c4a3-0fb0-44b5-a37d-8bcc9367aa7c
-        file: ./coverage.txt
-        fail_ci_if_error: true
 
   build:
     runs-on: ubuntu-latest
