@@ -4,10 +4,9 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/kubectl/pkg/drain"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
 	"github.com/soer3n/yaho/pkg/client"
@@ -45,7 +44,38 @@ func (n Node) prepare() error {
 	return nil
 }
 
-func (n Node) update() error {
+func (n *Node) update() error {
+
+	for _, ds := range n.Daemonsets {
+
+		err, ok := ds.isAlreadyManaged(n.flags.Client, n.Name, ds.Namespace)
+
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			if err := ds.isolatePod(n.flags.Client, n.Name, n.isolate); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, d := range n.Deployments {
+
+		err, ok := d.isAlreadyManaged(n.flags.Client, n.Name, d.Namespace)
+
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			if err := d.isolatePod(n.flags.Client, n.Name); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 

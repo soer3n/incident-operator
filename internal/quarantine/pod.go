@@ -10,6 +10,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+const quarantinePodLabelPrefix = "ops.soer3n.info/"
 const quarantinePodLabelKey = "quarantine"
 const quarantinePodLabelValue = "true"
 
@@ -39,11 +40,12 @@ func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName
 			labels := map[string]string{}
 			updateOpts := metav1.UpdateOptions{}
 
-			for k := range pod.ObjectMeta.Labels {
+			for k, v := range pod.ObjectMeta.Labels {
 				labels[k] = quarantinePodSelector
+				labels[quarantinePodLabelPrefix+k] = v
 			}
 
-			labels[quarantinePodLabelKey] = quarantinePodLabelValue
+			labels[quarantinePodLabelPrefix+quarantinePodLabelKey] = quarantinePodLabelValue
 
 			pod.ObjectMeta.Labels = labels
 			pod.Spec.Tolerations = append(pod.Spec.Tolerations, corev1.Toleration{

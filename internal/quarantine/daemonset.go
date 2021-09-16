@@ -2,18 +2,20 @@ package quarantine
 
 import (
 	"context"
+	"strings"
 
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
 
-func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode bool) error {
+var obj *v1.DaemonSet
+var err error
 
-	var obj *v1.DaemonSet
-	var err error
+func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode bool) error {
 
 	getOpts := metav1.GetOptions{}
 
@@ -70,4 +72,33 @@ func (ds Daemonset) removeToleration(c kubernetes.Interface) error {
 	}
 
 	return nil
+}
+
+func (ds Daemonset) isAlreadyManaged(c kubernetes.Interface, node, namespace string) (error, bool) {
+
+	getOpts := metav1.GetOptions{}
+
+	// get affected daemonset
+	if obj, err = c.AppsV1().DaemonSets(ds.Namespace).Get(context.TODO(), ds.Name, getOpts); err != nil {
+		return err, false
+	}
+
+	// define selector for getting wanted pod
+	selectorStringList := []string{}
+
+	for k, v := range obj.Spec.Selector.MatchLabels {
+		selectorStringList = append(selectorStringList, quarantinePodLabelPrefix+k+"="+v)
+	}
+
+	selectorStringList = append(selectorStringList, "kubernetes.io/hostname="+node)
+
+	listOpts := metav1.ListOptions{
+		LabelSelector: strings.Join(selectorStringList, ","),
+	}
+
+	if _, err = c.CoreV1().Pods(namespace).List(context.TODO(), listOpts); err != nil {
+		return err, false
+	}
+
+	return nil, true
 }
