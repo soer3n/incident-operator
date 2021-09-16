@@ -48,7 +48,7 @@ func (n *Node) update() error {
 
 	for _, ds := range n.Daemonsets {
 
-		err, ok := ds.isAlreadyManaged(n.flags.Client, n.Name, ds.Namespace)
+		ok, err := ds.isAlreadyManaged(n.flags.Client, n.Name, ds.Namespace)
 
 		if err != nil {
 			return err
@@ -63,7 +63,7 @@ func (n *Node) update() error {
 
 	for _, d := range n.Deployments {
 
-		err, ok := d.isAlreadyManaged(n.flags.Client, n.Name, d.Namespace)
+		ok, err := d.isAlreadyManaged(n.flags.Client, n.Name, d.Namespace)
 
 		if err != nil {
 			return err

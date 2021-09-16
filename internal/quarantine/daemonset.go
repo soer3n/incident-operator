@@ -74,13 +74,13 @@ func (ds Daemonset) removeToleration(c kubernetes.Interface) error {
 	return nil
 }
 
-func (ds Daemonset) isAlreadyManaged(c kubernetes.Interface, node, namespace string) (error, bool) {
+func (ds Daemonset) isAlreadyManaged(c kubernetes.Interface, node, namespace string) (bool, error) {
 
 	getOpts := metav1.GetOptions{}
 
 	// get affected daemonset
 	if obj, err = c.AppsV1().DaemonSets(ds.Namespace).Get(context.TODO(), ds.Name, getOpts); err != nil {
-		return err, false
+		return false, err
 	}
 
 	// define selector for getting wanted pod
@@ -97,8 +97,8 @@ func (ds Daemonset) isAlreadyManaged(c kubernetes.Interface, node, namespace str
 	}
 
 	if _, err = c.CoreV1().Pods(namespace).List(context.TODO(), listOpts); err != nil {
-		return err, false
+		return false, err
 	}
 
-	return nil, true
+	return true, nil
 }

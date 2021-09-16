@@ -24,7 +24,7 @@ func (d Deployment) isolatePod(c kubernetes.Interface, node string) error {
 	return updatePod(c, obj.Spec.Selector.MatchLabels, node, d.Namespace)
 }
 
-func (d Deployment) isAlreadyManaged(c kubernetes.Interface, node, namespace string) (error, bool) {
+func (d Deployment) isAlreadyManaged(c kubernetes.Interface, node, namespace string) (bool, error) {
 
 	var obj *v1.Deployment
 	var err error
@@ -33,7 +33,7 @@ func (d Deployment) isAlreadyManaged(c kubernetes.Interface, node, namespace str
 
 	// get affected daemonset
 	if obj, err = c.AppsV1().Deployments(d.Namespace).Get(context.TODO(), d.Name, getOpts); err != nil {
-		return err, false
+		return false, err
 	}
 
 	// define selector for getting wanted pod
@@ -50,8 +50,8 @@ func (d Deployment) isAlreadyManaged(c kubernetes.Interface, node, namespace str
 	}
 
 	if _, err = c.CoreV1().Pods(namespace).List(context.TODO(), listOpts); err != nil {
-		return err, false
+		return false, err
 	}
 
-	return nil, true
+	return true, nil
 }
