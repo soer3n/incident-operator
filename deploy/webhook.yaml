@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: quarantine-webhook
+  namespace: dev
+spec:
+  selector:
+    app: incident-operator
+  ports:
+  - name: webhook
+    port: 443
+    targetPort: 9443
+
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: quarantine
+webhooks:
+  - name: quarantine.webhook.svc
+    sideEffects: None
+    admissionReviewVersions:
+    - "v1"
+    - "v1beta1"
+    clientConfig:
+      service:
+        name: quarantine-webhook
+        namespace: dev
+        path: "/validate"
+      caBundle: "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURQekNDQWllZ0F3SUJBZ0lVS0RQYzE5YnNyaWd2MTE4RXk4SkhXUW8vYnNNd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0x6RXRNQ3NHQTFVRUF3d2tRV1J0YVhOemFXOXVJRU52Ym5SeWIyeHNaWElnVjJWaWFHOXZheUJFWlcxdgpJRU5CTUI0WERUSXhNRGt4T1RFMk1qUXdPVm9YRFRJeE1UQXhPVEUyTWpRd09Wb3dMekV0TUNzR0ExVUVBd3drClFXUnRhWE56YVc5dUlFTnZiblJ5YjJ4c1pYSWdWMlZpYUc5dmF5QkVaVzF2SUVOQk1JSUJJakFOQmdrcWhraUcKOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQXB4WWQ2MlVXZmlLQ3lKbjBNZ3NYUFc4VVRuZWRkZGljaWJSbAowVFBLbVN3dzExNXFmeXdZZ0g1K0RlcjZnYkdiYVFtc21SbmdjOENYZmhPUUlMbGtwQytZMUJLOXpLL2dobWdGCldCSnNsNXVUSVJVYVVEM2ozL0xCRWhFeURCNzh3RDgvVzVVMTRnd2Jvbi9rVDliMlNkZWYzcmw2ci81K1NQODQKLzN2VkZKN0Q0QWpaRFRLSzF6cjVTRGRJZDdGK0FaenZsUXBxekxrZXZGaHhZN2xIRzMvUFhBa3dRNFlUYlJiNAovWjIySGZkVitUM0lPczB5d2RIVzBURDNVOER6L0xERUgxem5aOHZVUjJjWS9GaG9IZzBsWVdTUWkyaGxEK0pVCk5YZmhlb1l1cWpndnBLRTl0Ny9mQ05Na1QxRjZFbFRjVDcxWVU5VHE2aUg2REZ5N1dRSURBUUFCbzFNd1VUQWQKQmdOVkhRNEVGZ1FVS21iMUgxbHlvSm55OVRRbEh4WUQ4RGN5RkRZd0h3WURWUjBqQkJnd0ZvQVVLbWIxSDFseQpvSm55OVRRbEh4WUQ4RGN5RkRZd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBTkJna3Foa2lHOXcwQkFRc0ZBQU9DCkFRRUFVdDJ1czJnTzFkWGpKMnlCM0JhN215c3RTNFBLRStuNWs2SUd2RFRkdnRFMHhMK0dxa2ZkTExtZ2R3R2IKT3VSMW9nTEdFSEtXK1hqV3lZOHlqTkxURGloK3BDeFgxeG85a2wwbGZtMThYREtPVXhSclRxemR3UGFLVFIrTAoxN0t4cUVyQzd6NjA0RTNHZy9sK2VrMGxzZ0QrNkJ0N1BYcW9oSkRHQnFEd1JPdkJIQnZPWUdHRTBFOFhaOWFMCitLZks0V2dIZnFVK3VSSSt1cXY2NVdLU1hHYmUrOTlxY1diQVE0ZEF4bm12Q0VPTEorWEt4dFFuOXhSekpVb0QKNzN6UEdiMUlxZTlxS2JXU0N3QmhuWFZNTzlMRmhrYzFtNU5PaGhDUmRaRStUdnY5TlJBVkg4QmRYeTEvTm1TcgpUNmV2bzE4MGkwMTFhb29ZWkEyeHZkbGEzUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: ["ops.soer3n.info"]
+        apiVersions: ["v1alpha1"]
+        resources: ["quarantines"]

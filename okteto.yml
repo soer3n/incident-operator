@@ -14,10 +14,11 @@ sync:
 - .:/usr/src/app
 remote: 2347
 forward:
-# - 8080:8080
-- 2347:2347
-environment:
-  PATH: $PATH:/usr/local/go/bin:/go/bin
+- 8080:8080
+- 9443:quarantine-webhook:443
+secrets:
+  - $HOME/webhook-tls.crt:/tmp/k8s-webhook-server/serving-certs/tls.crt:400
+  - $HOME/webhook-tls.key:/tmp/k8s-webhook-server/serving-certs/tls.key:400
 persistentVolume:
   enabled: true
   storageClass: local-path-storage

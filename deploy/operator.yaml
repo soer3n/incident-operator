@@ -21,7 +21,7 @@ spec:
       securityContext:
         runAsUser: 65532
       containers:
-      - image: ${IMG}
+      - image: hub.soer3n.info/library/incident-operator:0.0.1
         name: incident-manager
         securityContext:
           allowPrivilegeEscalation: false
