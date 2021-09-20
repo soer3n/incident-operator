@@ -4,16 +4,19 @@ kind: Deployment
 metadata:
   name: incident-controller-manager
   labels:
-    control-plane: incident-controller-manager
+    app: incident-operator
+    component: incident-controller-manager
 spec:
   selector:
     matchLabels:
-      control-plane: incident-controller-manager
+      app: incident-operator
+      component: incident-controller-manager
   replicas: 1
   template:
     metadata:
       labels:
-        control-plane: incident-controller-manager
+        app: incident-operator
+        component: incident-controller-manager
     spec:
       imagePullSecrets:
       - name: harbor-registry-secret
@@ -23,6 +26,8 @@ spec:
       containers:
       - image: hub.soer3n.info/library/incident-operator:0.0.1
         name: incident-manager
+        command:
+          - "operator"
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:

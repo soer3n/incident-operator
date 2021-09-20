@@ -8,8 +8,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
-
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -19,19 +17,8 @@ const (
 	tlsKeyFile  = `tls.key`
 )
 
-// NewAPICmd represents the api subcommand
-func NewWebhookCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "webhook",
-		Short: "runs backend for webhook",
-		Long:  `webhook application`,
-		Run: func(cmd *cobra.Command, args []string) {
-			runWebhookServer()
-		},
-	}
-}
-
-func runWebhookServer() error {
+// RunWebhookServer represents initialization of an http server
+func RunWebhookServer() error {
 	certPath := filepath.Join(tlsDir, tlsCertFile)
 	keyPath := filepath.Join(tlsDir, tlsKeyFile)
 	server := newWebhookServer()

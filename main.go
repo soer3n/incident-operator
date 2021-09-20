@@ -2,7 +2,6 @@ package main
 
 import (
 	appcmd "github.com/soer3n/incident-operator/cmd"
-	webhook "github.com/soer3n/incident-operator/internal/webhook"
 	"github.com/spf13/cobra"
 )
 
@@ -20,6 +19,6 @@ func NewRootCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(appcmd.NewOperatorCmd())
-	cmd.AddCommand(webhook.NewWebhookCmd())
+	cmd.AddCommand(appcmd.NewWebhookCmd())
 	return cmd
 }
