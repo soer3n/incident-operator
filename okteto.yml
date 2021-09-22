@@ -3,9 +3,9 @@ namespace: dev
 autocreate: true
 image: okteto/golang:1
 command: bash
-labels:
-  app: incident-operator
-  component: incident-validation-webhook
+#labels:
+#  app: incident-operator
+#  component: incident-validation-webhook
 securityContext:
   capabilities:
     add:

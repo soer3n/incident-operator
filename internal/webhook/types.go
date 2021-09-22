@@ -6,7 +6,8 @@ import (
 )
 
 type QuarantineHandler struct {
-	body     []byte
-	response *v1beta1.AdmissionReview
-	client   kubernetes.Interface
+	body           []byte
+	response       *v1beta1.AdmissionReview
+	client         kubernetes.Interface
+	rescheduleNode string
 }
