@@ -20,5 +20,6 @@ func NewRootCmd() *cobra.Command {
 
 	cmd.AddCommand(appcmd.NewOperatorCmd())
 	cmd.AddCommand(appcmd.NewWebhookCmd())
+	cmd.AddCommand(appcmd.NewJobCmd())
 	return cmd
 }

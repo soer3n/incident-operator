@@ -44,13 +44,13 @@ func quarantineHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if ar, err = handler.getAdmissionRequestSpec(body, w); err != nil {
-		log.Fatal("incorrect body")
-		http.Error(w, "incorrect body", http.StatusBadRequest)
+		log.Fatal("error deserializing admission request spec")
+		http.Error(w, "error on deserializing body", http.StatusBadRequest)
 		return
 	}
 
 	if q, err = handler.getQuarantineSpec(ar, w); err != nil {
-		log.Fatal("error deserializing pod")
+		log.Fatal("error deserializing quarantine spec")
 		http.Error(w, "error on deserializing body", http.StatusBadRequest)
 		return
 	}

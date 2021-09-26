@@ -125,7 +125,6 @@ func (n *Node) parseFlags() {
 		IgnoreAllDaemonSets: true,
 		DisableEviction:     false,
 		PodSelector:         "!" + quarantinePodSelector,
-		DeleteLocalData:     false,
 		Force:               false,
 		Ctx:                 context.TODO(),
 		Client:              client.New().TypedClient,

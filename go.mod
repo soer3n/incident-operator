@@ -9,12 +9,13 @@ require (
 	github.com/prometheus/common v0.26.0
 	github.com/soer3n/yaho v0.0.0-20210905193644-9ee4140d4c74
 	github.com/spf13/cobra v1.1.3
-	k8s.io/api v0.20.4
-	k8s.io/apimachinery v0.21.2
-	k8s.io/cli-runtime v0.20.4
+	k8s.io/api v0.22.0
+	k8s.io/apimachinery v0.22.0
+	k8s.io/cli-runtime v0.20.5
 	k8s.io/client-go v1.5.2
-	k8s.io/kubectl v0.19.2
+	k8s.io/kubectl v0.20.5
 	sigs.k8s.io/controller-runtime v0.9.2
+	sigs.k8s.io/descheduler v0.19.0
 )
 
 replace (
