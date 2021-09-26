@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"net/http"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
@@ -47,33 +46,13 @@ func (qh QuarantineHandler) getControllerPod() (*corev1.Pod, error) {
 
 func (qh *QuarantineHandler) controllerShouldBeRescheduled(pod *corev1.Pod, q *v1alpha1.Quarantine) bool {
 
-	var err error
-	var nn string
-
 	for _, n := range q.Spec.Nodes {
 		if n.Name == pod.Spec.NodeName {
-			if nn, err = qh.findNewNode(pod, q); err != nil {
-				log.Fatal(err.Error())
-				log.Fatal("cannot finde node for scheduling")
-				return false
-			}
-
-			qh.rescheduleNode = nn
-
 			return true
 		}
 	}
 
 	return false
-}
-
-func (qh QuarantineHandler) findNewNode(pod *corev1.Pod, q *v1alpha1.Quarantine) (string, error) {
-
-	return "", nil
-}
-
-func (qh *QuarantineHandler) rescheduleController() error {
-	return nil
 }
 
 func (qh *QuarantineHandler) getAdmissionRequestSpec(body []byte, w http.ResponseWriter) (*v1beta1.AdmissionReview, error) {
