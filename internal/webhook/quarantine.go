@@ -1,15 +1,12 @@
 package webhook
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
 	"k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const quarantineControllerLabel = "control-plane=incident-controller-manager"
@@ -21,27 +18,6 @@ func (qh *QuarantineHandler) parseAdmissionResponse() error {
 	}
 
 	return nil
-}
-
-func (qh QuarantineHandler) getControllerPod() (*corev1.Pod, error) {
-
-	var pods *corev1.PodList
-	var pod *corev1.Pod
-	var err error
-
-	listOpts := metav1.ListOptions{
-		LabelSelector: quarantineControllerLabel,
-	}
-
-	if pods, err = qh.client.CoreV1().Pods("").List(context.TODO(), listOpts); err != nil {
-		return pod, err
-	}
-
-	if len(pods.Items) > 1 {
-		return pod, errors.New("multiple controller pods found")
-	}
-
-	return &pods.Items[0], nil
 }
 
 func (qh *QuarantineHandler) controllerShouldBeRescheduled(pod *corev1.Pod, q *v1alpha1.Quarantine) bool {
