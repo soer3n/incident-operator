@@ -1,9 +1,8 @@
-package utils
+package cli
 
 import (
 	"context"
 	"errors"
-	"log"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +37,8 @@ func RescheduleQuarantineController(excludedNodes []string) error {
 		return err
 	}
 
+	pod.Spec.NodeSelector[quarantineControllerLabelKey] = quarantineControllerLabelValue
+
 	ev := evictions.NewPodEvictor(typedClient, rescheduleStrategy, false, 1, excludedNodesObj, false)
 
 	if success, err = ev.EvictPod(context.TODO(), pod, node); err != nil {
@@ -57,16 +58,26 @@ func labelNodes(c kubernetes.Interface, excludedNodes []string) error {
 	var node corev1.Node
 	var err error
 
-	listOpts := metav1.ListOptions{
-		LabelSelector: quarantineControllerLabel,
-	}
+	listOpts := metav1.ListOptions{}
 
 	if nodes, err = c.CoreV1().Nodes().List(context.TODO(), listOpts); err != nil {
 		return err
 	}
 
 	for _, node = range nodes.Items {
-		log.Print(node.ObjectMeta.Name)
+		label := true
+		for _, e := range excludedNodes {
+			if node.ObjectMeta.Name == e {
+				label = false
+			}
+
+			if label {
+				node.ObjectMeta.Labels[quarantineControllerLabelKey] = quarantineControllerLabelValue
+				if _, err = c.CoreV1().Nodes().Update(context.TODO(), &node, metav1.UpdateOptions{}); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	return nil

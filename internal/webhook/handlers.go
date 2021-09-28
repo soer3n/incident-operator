@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
-	"github.com/soer3n/incident-operator/internal/utils"
+	"github.com/soer3n/incident-operator/internal/cli"
 	"github.com/soer3n/yaho/pkg/client"
 	"k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -57,7 +57,7 @@ func quarantineHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if pod, err = utils.GetControllerPod(client.New().TypedClient); err != nil {
+	if pod, err = cli.GetControllerPod(client.New().TypedClient); err != nil {
 		log.Fatal("error on getting controller pod")
 		http.Error(w, "no validate", http.StatusBadRequest)
 		return

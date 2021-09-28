@@ -3,7 +3,7 @@ package cmd
 import (
 	"strings"
 
-	"github.com/soer3n/incident-operator/internal/utils"
+	"github.com/soer3n/incident-operator/internal/cli"
 	"github.com/spf13/cobra"
 )
 
@@ -32,7 +32,7 @@ func newJobRescheduleCmd() *cobra.Command {
 				return
 			}
 
-			utils.RescheduleQuarantineController(strings.Split(excludedNodes, ","))
+			cli.RescheduleQuarantineController(strings.Split(excludedNodes, ","))
 		},
 	}
 
