@@ -9,8 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const quarantineControllerLabel = "control-plane=incident-controller-manager"
-
 func (qh *QuarantineHandler) parseAdmissionResponse() error {
 
 	if err := json.Unmarshal(qh.body, qh.response); err != nil {
