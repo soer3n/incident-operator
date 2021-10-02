@@ -7,20 +7,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NewRootCmd represents the root command manager
-func NewJobCmd() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "run",
-		Short: "runs job related to quarantine validation",
-		Long:  `jobs`,
-	}
-
-	cmd.AddCommand(newJobRescheduleCmd())
-	return cmd
-}
-
 // NewWebhookCmd represents the api subcommand
-func newJobRescheduleCmd() *cobra.Command {
+func NewJobRescheduleCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reschedule",
 		Short: "runs job to reschedule quarantine validation",
