@@ -39,7 +39,8 @@ func RunWebhookServer() error {
 
 func newWebhookServer() *http.Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/validate", quarantineHandler)
+	handler := QuarantineHTTPHandler{}
+	mux.HandleFunc("/validate", handler.quarantineHandler)
 	return &http.Server{
 		// We listen on port 9443 such that we do not need root privileges or extra capabilities for this server.
 		// The Service object will take care of mapping this port to the HTTPS port 443.

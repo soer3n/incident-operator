@@ -13,7 +13,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func quarantineHandler(w http.ResponseWriter, r *http.Request) {
+func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http.Request) {
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	var body, res []byte
 	var pod *corev1.Pod
