@@ -63,14 +63,14 @@ func quarantineHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !handler.controllerShouldBeRescheduled(pod, q) {
-		log.Print("controller pod is on a valid node")
-		return
-	}
-
 	if err := handler.parseAdmissionResponse(); err != nil {
 		log.Fatal("admission validation failed")
 		http.Error(w, "admission validation failed", http.StatusBadRequest)
+		return
+	}
+
+	if !handler.controllerShouldBeRescheduled(pod, q) {
+		log.Print("controller pod is on a valid node")
 		return
 	}
 

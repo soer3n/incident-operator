@@ -10,8 +10,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const quarantineControllerLabelKey = "control-plane"
+const quarantineControllerLabelKey = "component"
 const quarantineControllerLabelValue = "incident-controller-manager"
+const quarantineControllerLabelIgnoreNodeKey = "ops.soer3n.info/isolate"
+const quarantineControllerLabelIgnoreNodeValue = "true"
 
 func GetControllerPod(c kubernetes.Interface) (*corev1.Pod, error) {
 

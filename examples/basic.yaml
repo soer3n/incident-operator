@@ -7,12 +7,12 @@ spec:
     enabled: true
     image: nicolaka/netshoot
   nodes:
-  - name: mngt-mngt-pool-7c46bb775f-fghln
+  - name: mngt-mngt-pool-f47cdbdfc-r792b
     isolate: true # add taint to node 
     rescale: false # if machine-controller is present (not yet implemented)
   resources:
   - type: daemonset
     name: loki-stack-promtail
-    namespace: loki-stack
+  #  namespace: loki-stack
   #- type: deployment
   #  name: deployment-resource  

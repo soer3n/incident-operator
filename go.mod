@@ -3,12 +3,16 @@ module github.com/soer3n/incident-operator
 go 1.16
 
 require (
+	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/go-logr/logr v0.4.0
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
 	github.com/prometheus/common v0.26.0
 	github.com/soer3n/yaho v0.0.0-20210905193644-9ee4140d4c74
 	github.com/spf13/cobra v1.1.3
+	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/tools v0.1.6-0.20210908190839-cf92b39a962c // indirect
 	k8s.io/api v0.22.0
 	k8s.io/apimachinery v0.22.0
 	k8s.io/cli-runtime v0.20.5

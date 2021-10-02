@@ -26,8 +26,8 @@ spec:
       containers:
       - image: hub.soer3n.info/library/incident-operator:0.0.1
         name: incident-manager
-        command:
-          - "operator"
+        # command:
+        #  - "operator"
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:
@@ -50,3 +50,10 @@ spec:
             cpu: 100m
             memory: 200Mi
       terminationGracePeriodSeconds: 10
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: ops.soer3n.info/isolate
+                operator: DoesNotExist
