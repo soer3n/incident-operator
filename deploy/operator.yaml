@@ -24,7 +24,7 @@ spec:
       securityContext:
         runAsUser: 65532
       containers:
-      - image: hub.soer3n.info/library/incident-operator:0.0.2
+      - image: hub.soer3n.info/library/incident-operator:0.0.3
         name: incident-manager
         args:
         - "operator"
