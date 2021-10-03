@@ -15,6 +15,7 @@ const quarantineControllerLabelValue = "incident-controller-manager"
 const quarantineControllerLabelIgnoreNodeKey = "ops.soer3n.info/isolate"
 const quarantineControllerLabelIgnoreNodeValue = "true"
 
+// GetControllerPod represents func for returning controller pod struct
 func GetControllerPod(c kubernetes.Interface) (*corev1.Pod, error) {
 
 	var pods *corev1.PodList
@@ -36,6 +37,7 @@ func GetControllerPod(c kubernetes.Interface) (*corev1.Pod, error) {
 	return &pods.Items[0], nil
 }
 
+// GetControllerNode represents func for returning node struct on which controller pod is running
 func GetControllerNode(c kubernetes.Interface, pod *corev1.Pod) (*corev1.Node, error) {
 
 	var node *corev1.Node

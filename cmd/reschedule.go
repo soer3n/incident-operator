@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewWebhookCmd represents the api subcommand
+// NewJobRescheduleCmd represents the api subcommand
 func NewJobRescheduleCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "reschedule",

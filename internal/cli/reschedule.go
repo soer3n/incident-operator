@@ -15,8 +15,8 @@ import (
 
 const (
 	rescheduleStrategy  = ""
-	EvictionKind        = "Eviction"
-	EvictionSubresource = "pods/eviction"
+	evictionKind        = "Eviction"
+	evictionSubresource = "pods/eviction"
 )
 
 // RescheduleQuarantineController represents descheduling of quarantine controller if needed due to validation
@@ -51,7 +51,7 @@ func RescheduleQuarantineController(excludedNodes []string) error {
 
 	pod.Spec.NodeSelector[quarantineControllerLabelKey] = quarantineControllerLabelValue
 
-	if policyGroupVersion, err = SupportEviction(discoveryClient); err != nil {
+	if policyGroupVersion, err = supportEviction(discoveryClient); err != nil {
 		return err
 	}
 
@@ -100,7 +100,7 @@ func labelNodes(c kubernetes.Interface, excludedNodes []string) error {
 	return nil
 }
 
-func SupportEviction(client discovery.ServerResourcesInterface) (string, error) {
+func supportEviction(client discovery.ServerResourcesInterface) (string, error) {
 	groupList, _, err := client.ServerGroupsAndResources()
 	if err != nil {
 		return "", err
@@ -122,7 +122,7 @@ func SupportEviction(client discovery.ServerResourcesInterface) (string, error) 
 		return "", err
 	}
 	for _, resource := range resourceList.APIResources {
-		if resource.Name == EvictionSubresource && resource.Kind == EvictionKind {
+		if resource.Name == evictionSubresource && resource.Kind == evictionKind {
 			return policyGroupVersion, nil
 		}
 	}

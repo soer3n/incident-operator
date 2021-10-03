@@ -32,6 +32,7 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+// RunOperator represents starting the quarantine operator
 func RunOperator() {
 	var metricsAddr string
 	var enableLeaderElection bool
