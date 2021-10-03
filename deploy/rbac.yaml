@@ -20,34 +20,6 @@ subjects:
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: iop-manager-rolebinding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: iop-manager-role
-subjects:
-- kind: ServiceAccount
-  namespace: dev
-  name: default
-
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: iop-manager-iop-rolebinding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: iop-manager-role
-subjects:
-- kind: ServiceAccount
-  namespace: dev
-  name: iop
-
----
-apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: iop-manager-role
@@ -89,6 +61,72 @@ rules:
   - 'ops.soer3n.info'
   resources:
   - 'quarantines'
+  - 'quarantines/status'
+  verbs:
+  - 'update'
+  - 'patch'
+  - 'get'
+  - 'list'
+  - 'watch'
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dev-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dev-manager-role
+subjects:
+- kind: ServiceAccount
+  namespace: dev
+  name: default
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dev-manager-role
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - 'pods'
+  verbs:
+  - 'update'
+  - 'patch'
+  - 'create'
+  - 'delete'
+  - 'get'
+  - 'list'
+  - 'watch'
+- apiGroups:
+  - ''
+  resources:
+  - 'nodes'
+  verbs:
+  - 'update'
+  - 'patch'
+  - 'get'
+  - 'list'
+  - 'watch'
+- apiGroups:
+  - 'apps'
+  resources:
+  - 'deployments'
+  - 'daemonsets'
+  verbs:
+  - 'update'
+  - 'patch'
+  - 'get'
+  - 'list'
+  - 'watch'
+- apiGroups:
+  - 'ops.soer3n.info'
+  resources:
+  - 'quarantines'
+  - 'quarantines/status'
   verbs:
   - 'update'
   - 'patch'

@@ -24,10 +24,11 @@ spec:
       securityContext:
         runAsUser: 65532
       containers:
-      - image: hub.soer3n.info/library/incident-operator:0.0.1
+      - image: hub.soer3n.info/library/incident-operator:0.0.2
         name: incident-manager
-        # command:
-        #  - "operator"
+        args:
+        - "operator"
+        - "serve"
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:

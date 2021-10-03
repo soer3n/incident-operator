@@ -88,6 +88,10 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "finalizer", err.Error())
 	}
 
+	if instance.GetDeletionTimestamp() != nil {
+		return ctrl.Result{}, nil
+	}
+
 	if q.IsActive() {
 		reqLogger.Info("Quarantine already active. Update if needed.")
 
@@ -123,7 +127,7 @@ func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, ob
 
 		controllerutil.RemoveFinalizer(instance, quarantineFinalizer)
 
-		if err := r.Update(context.Background(), instance); err != nil {
+		if err := r.Update(context.TODO(), instance); err != nil {
 			return err
 		}
 
@@ -165,7 +169,9 @@ func (r *QuarantineReconciler) syncStatus(ctx context.Context, instance *v1alpha
 	condition := metav1.Condition{Type: quarantineStatusKey, Status: stats, LastTransitionTime: metav1.Time{Time: time.Now()}, Reason: reason, Message: message}
 	meta.SetStatusCondition(&instance.Status.Conditions, condition)
 
-	_ = r.Status().Update(ctx, instance)
+	if err := r.Status().Update(ctx, instance); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	reqLogger.Info("Don't reconcile quarantine resource after sync.")
 	return ctrl.Result{}, nil

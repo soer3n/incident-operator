@@ -37,6 +37,7 @@ spec:
             description: QuarantineSpec defines the desired state of Quarantine
             properties:
               debug:
+                description: Debug defines a debug pod configuration
                 properties:
                   enabled:
                     type: boolean
@@ -51,6 +52,7 @@ spec:
                 description: Foo is an example field of Quarantine. Edit quarantine_types.go
                   to remove/update
                 items:
+                  description: Node defines a configuration for node to isolate
                   properties:
                     isolate:
                       type: boolean
@@ -64,6 +66,7 @@ spec:
                 type: array
               resources:
                 items:
+                  description: Resource defines a workload to isolate on a node
                   properties:
                     name:
                       type: string

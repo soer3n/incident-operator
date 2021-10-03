@@ -13,6 +13,6 @@ spec:
   resources:
   - type: daemonset
     name: loki-stack-promtail
-  #  namespace: loki-stack
+    namespace: loki-stack
   #- type: deployment
   #  name: deployment-resource  
