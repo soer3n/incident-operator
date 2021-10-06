@@ -79,3 +79,26 @@ jobs:
         go-version: 1.16
     - name: build
       run: go build -v ./...
+
+  docker_build:
+    runs-on: ubuntu-latest
+    needs:
+    - build
+    steps:
+    - uses: actions/checkout@v2
+    - name: set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: build
+      run: |
+        make docker-build
+        make push
+      env:
+        IMG: ghcr.io/soer3n/incident-operator:${{ github.sha }}
