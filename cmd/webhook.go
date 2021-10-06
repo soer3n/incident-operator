@@ -48,7 +48,7 @@ func newWebhookCreateCertsCmd() *cobra.Command {
 		Short: "runs job for webhook tls cert creation",
 		Long:  `webhook application`,
 		Run: func(cmd *cobra.Command, args []string) {
-			log.Printf("%v", webhook.InstallWebhookCerts("quarantine-webhook.dev.svc", "dev"))
+			log.Printf("%v", webhook.InstallWebhook("quarantine-webhook.dev.svc", "dev"))
 		},
 	}
 }

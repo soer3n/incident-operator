@@ -28,9 +28,9 @@ const (
 	commonName = "quarantine-webhook.dev.svc"
 )
 
-func generateWebhookCert() (*WebhookCert, error) {
+func generateWebhookCert() (*Cert, error) {
 
-	webhookCert := &WebhookCert{}
+	webhookCert := &Cert{}
 
 	// Generate RSA key.
 	key, err := rsa.GenerateKey(rand.Reader, bitSize)
@@ -59,7 +59,7 @@ func generateWebhookCert() (*WebhookCert, error) {
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
 	})
 
-	webhookCert.Ca = WebhookCA{
+	webhookCert.Ca = CA{
 		Key:     caPrivKeyPEM.Bytes(),
 		Cert:    caPEM.Bytes(),
 		CertObj: ca,
@@ -84,7 +84,8 @@ func getCertTemplate() *x509.Certificate {
 	}
 }
 
-func InstallWebhookCerts(subj, namespace string) error {
+// InstallWebhook represents func for installing needed resources for a functional webhook
+func InstallWebhook(subj, namespace string) error {
 
 	log.Print("generating ca bundle...")
 	wc, _ := generateWebhookCert()
@@ -108,7 +109,7 @@ func InstallWebhookCerts(subj, namespace string) error {
 	return nil
 }
 
-func (w *WebhookCert) create(CommonName string) error {
+func (w *Cert) create(CommonName string) error {
 
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
@@ -158,7 +159,7 @@ func (w *WebhookCert) create(CommonName string) error {
 	return nil
 }
 
-func (w WebhookCert) deploySecret(namespace string, c kubernetes.Interface) error {
+func (w Cert) deploySecret(namespace string, c kubernetes.Interface) error {
 
 	var err error
 
@@ -197,7 +198,7 @@ func (w WebhookCert) deploySecret(namespace string, c kubernetes.Interface) erro
 	return nil
 }
 
-func (w WebhookCert) deployValidationWebhook(namespace string, c kubernetes.Interface) error {
+func (w Cert) deployValidationWebhook(namespace string, c kubernetes.Interface) error {
 
 	var err error
 

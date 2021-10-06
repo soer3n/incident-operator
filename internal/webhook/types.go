@@ -21,13 +21,15 @@ type QuarantineHTTPHandler struct {
 	mu sync.Mutex
 }
 
-type WebhookCert struct {
-	Ca   WebhookCA
+// Cert represents struct for installing webhook resources after cert creation
+type Cert struct {
+	Ca   CA
 	Key  []byte
 	Cert []byte
 }
 
-type WebhookCA struct {
+// CA represents struct for needed items for signing certs with a ca
+type CA struct {
 	Key     []byte
 	Cert    []byte
 	CertObj *x509.Certificate
