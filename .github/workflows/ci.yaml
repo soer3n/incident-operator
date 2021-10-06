@@ -99,6 +99,6 @@ jobs:
     - name: build
       run: |
         make docker-build
-        make push
+        make docker-push
       env:
         IMG: ghcr.io/soer3n/incident-operator:${{ github.sha }}
