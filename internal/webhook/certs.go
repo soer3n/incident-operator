@@ -247,6 +247,7 @@ func (w Cert) deployValidationWebhook(namespace string, c kubernetes.Interface) 
 	getOpts := metav1.GetOptions{}
 	_, err = c.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(context.TODO(), "quarantine", getOpts)
 
+	f := admissionv1beta1.Fail
 	validatePath := "/validate"
 	webhookConfig := &admissionv1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
@@ -267,6 +268,7 @@ func (w Cert) deployValidationWebhook(namespace string, c kubernetes.Interface) 
 					},
 					CABundle: w.Ca.Cert,
 				},
+				FailurePolicy: &f,
 				Rules: []admissionv1beta1.RuleWithOperations{
 					{
 						Operations: []admissionv1beta1.OperationType{
