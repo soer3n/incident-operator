@@ -34,6 +34,9 @@ func (qh *QuarantineHandler) getAdmissionRequestSpec(body []byte, w http.Respons
 	}
 
 	qh.response = arRequest
+	qh.response.Response = &v1beta1.AdmissionResponse{
+		Allowed: true,
+	}
 
 	return arRequest, nil
 }

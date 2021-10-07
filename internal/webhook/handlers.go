@@ -32,44 +32,40 @@ func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http
 	}
 
 	if len(body) == 0 {
-		log.Fatal("empty body")
+		log.Print("empty body")
 		http.Error(w, "empty body", http.StatusBadRequest)
 		return
 	}
 
 	if r.URL.Path != "/validate" {
-		log.Fatal("no validate")
+		log.Print("no validate")
 		http.Error(w, "no validate", http.StatusBadRequest)
 		return
 	}
 
 	handler := QuarantineHandler{
-		body: body,
-		response: &v1beta1.AdmissionReview{
-			Response: &v1beta1.AdmissionResponse{
-				Allowed: true,
-			},
-		},
-		client: client.New().TypedClient,
+		body:     body,
+		response: &v1beta1.AdmissionReview{},
+		client:   client.New().TypedClient,
 	}
 
 	if ar, err = handler.getAdmissionRequestSpec(body, w); err != nil {
 		log.Print("error deserializing admission request spec")
-		log.Fatal(err.Error())
+		log.Print(err.Error())
 		h.errorResponse(w, handler.response)
 		return
 	}
 
 	if q, err = handler.getQuarantineSpec(ar, w); err != nil {
 		log.Print("error deserializing quarantine spec")
-		log.Fatal(err.Error())
+		log.Print(err.Error())
 		h.errorResponse(w, handler.response)
 		return
 	}
 
 	if pod, err = cli.GetControllerPod(client.New().TypedClient); err != nil {
 		log.Print("error on getting controller pod")
-		log.Fatal(err.Error())
+		log.Print(err.Error())
 		h.errorResponse(w, handler.response)
 		return
 	}
@@ -81,13 +77,13 @@ func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http
 
 	if res, err = json.Marshal(handler.response); err != nil {
 		log.Print("failed to parse admission response")
-		log.Fatal(err.Error())
+		log.Print(err.Error())
 		h.errorResponse(w, handler.response)
 	}
 
 	if _, err := w.Write(res); err != nil {
 		log.Print("failed to write admission response")
-		log.Fatal(err.Error())
+		log.Print(err.Error())
 		http.Error(w, "admission reponse writing failed", http.StatusBadRequest)
 	}
 }
@@ -99,7 +95,7 @@ func (h *QuarantineHTTPHandler) errorResponse(w http.ResponseWriter, response *v
 
 	if res, err = json.Marshal(response); err != nil {
 		log.Print("failed to parse admission response")
-		log.Fatal(err.Error())
+		log.Print(err.Error())
 		http.Error(w, "admission response parsing failed", http.StatusBadRequest)
 	}
 
@@ -112,7 +108,7 @@ func (h *QuarantineHTTPHandler) errorResponse(w http.ResponseWriter, response *v
 
 	if _, err := w.Write(res); err != nil {
 		log.Print("failed to write admission response")
-		log.Fatal(err.Error())
+		log.Print(err.Error())
 		http.Error(w, "admission reponse writing failed", http.StatusBadRequest)
 	}
 }
