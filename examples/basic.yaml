@@ -7,7 +7,7 @@ spec:
     enabled: true
     image: nicolaka/netshoot
   nodes:
-  - name: mngt-mngt-pool-f47cdbdfc-r792b
+  - name: mngt-mngt-pool-f47cdbdfc-5gmpq
     isolate: true # add taint to node 
     rescale: false # if machine-controller is present (not yet implemented)
   resources:
