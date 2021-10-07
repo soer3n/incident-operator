@@ -43,12 +43,19 @@ func newWebhookInstallCertsCmd() *cobra.Command {
 }
 
 func newWebhookCreateCertsCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "certs",
 		Short: "runs job for webhook tls cert creation",
 		Long:  `webhook application`,
 		Run: func(cmd *cobra.Command, args []string) {
-			log.Printf("%v", webhook.InstallWebhook("quarantine-webhook.dev.svc", "dev"))
+			svc, _ := cmd.Flags().GetString("service")
+			namespace, _ := cmd.Flags().GetString("namespace")
+			log.Printf("%v", webhook.InstallWebhook(svc, namespace))
 		},
 	}
+
+	cmd.PersistentFlags().String("service", "quarantine-webhook.dev.svc", "name of deployed webhook service")
+	cmd.PersistentFlags().String("namespace", "dev", "namespace for deploying resources")
+
+	return cmd
 }

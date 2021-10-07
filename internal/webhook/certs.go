@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	b64 "encoding/base64"
 	"encoding/pem"
 	"log"
 	"math/big"
@@ -172,8 +171,8 @@ func (w Cert) deploySecret(namespace string, c kubernetes.Interface) error {
 			Namespace: namespace,
 		},
 		Data: map[string][]byte{
-			"tls.crt": []byte(b64.StdEncoding.EncodeToString(w.Cert)),
-			"tls.key": []byte(b64.StdEncoding.EncodeToString(w.Key)),
+			"tls.crt": w.Cert,
+			"tls.key": w.Key,
 		},
 	}
 
