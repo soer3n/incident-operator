@@ -115,6 +115,8 @@ func DeleteWebhook(namespace string) error {
 
 	c := client.New().TypedClient
 
+	log.Print("deleting secrets...")
+
 	getOpts := metav1.GetOptions{}
 	_, err = c.CoreV1().Secrets(namespace).Get(context.TODO(), "incident-webhook", getOpts)
 
@@ -129,6 +131,8 @@ func DeleteWebhook(namespace string) error {
 		return err
 	}
 
+	log.Print("deleting validating admission webhook...")
+
 	_, err = c.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(context.TODO(), "quarantine", getOpts)
 
 	if err != nil {
@@ -140,6 +144,8 @@ func DeleteWebhook(namespace string) error {
 	if err != nil {
 		return err
 	}
+
+	log.Print("webhook assets deleted successfully...")
 
 	return nil
 }
