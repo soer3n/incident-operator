@@ -3,15 +3,15 @@ package webhook
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
+
+	log "github.com/golang/glog"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
 	"github.com/soer3n/incident-operator/internal/cli"
 	"github.com/soer3n/yaho/pkg/client"
 	"k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http.Request) {
@@ -32,13 +32,13 @@ func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http
 	}
 
 	if len(body) == 0 {
-		log.Print("empty body")
+		log.Fatal("empty body")
 		http.Error(w, "empty body", http.StatusBadRequest)
 		return
 	}
 
 	if r.URL.Path != "/validate" {
-		log.Print("no validate")
+		log.Fatal("no validate")
 		http.Error(w, "no validate", http.StatusBadRequest)
 		return
 	}
@@ -50,65 +50,40 @@ func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http
 	}
 
 	if ar, err = handler.getAdmissionRequestSpec(body, w); err != nil {
-		log.Print("error deserializing admission request spec")
-		log.Print(err.Error())
-		h.errorResponse(w, handler.response)
+		log.Error("error deserializing admission request spec")
+		log.Error(err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if q, err = handler.getQuarantineSpec(ar, w); err != nil {
-		log.Print("error deserializing quarantine spec")
-		log.Print(err.Error())
-		h.errorResponse(w, handler.response)
+		log.Error("error deserializing quarantine spec")
+		log.Error(err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if pod, err = cli.GetControllerPod(client.New().TypedClient); err != nil {
-		log.Print("error on getting controller pod")
-		log.Print(err.Error())
-		h.errorResponse(w, handler.response)
+		log.Error("error on getting controller pod")
+		log.Fatal(err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if !handler.controllerShouldBeRescheduled(pod, q) {
-		log.Print("controller pod is on a valid node")
+		log.Info("controller pod is on a valid node")
 		return
 	}
 
 	if res, err = json.Marshal(handler.response); err != nil {
-		log.Print("failed to parse admission response")
-		log.Print(err.Error())
-		h.errorResponse(w, handler.response)
+		log.Error("failed to parse admission response")
+		log.Error(err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
 	if _, err := w.Write(res); err != nil {
-		log.Print("failed to write admission response")
-		log.Print(err.Error())
-		http.Error(w, "admission reponse writing failed", http.StatusBadRequest)
-	}
-}
-
-func (h *QuarantineHTTPHandler) errorResponse(w http.ResponseWriter, response *v1beta1.AdmissionReview) {
-
-	var res []byte
-	var err error
-
-	if res, err = json.Marshal(response); err != nil {
-		log.Print("failed to parse admission response")
-		log.Print(err.Error())
-		http.Error(w, "admission response parsing failed", http.StatusBadRequest)
-	}
-
-	response.Response = &v1beta1.AdmissionResponse{
-		Allowed: false,
-		Result: &metav1.Status{
-			Message: "Quarantine Controller is currently running on a node which is requested for isolation",
-		},
-	}
-
-	if _, err := w.Write(res); err != nil {
-		log.Print("failed to write admission response")
-		log.Print(err.Error())
+		log.Error("failed to write admission response")
+		log.Error(err.Error())
 		http.Error(w, "admission reponse writing failed", http.StatusBadRequest)
 	}
 }

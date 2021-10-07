@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/go-logr/logr v0.4.0
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
