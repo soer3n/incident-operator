@@ -11,6 +11,7 @@ import (
 	"github.com/soer3n/yaho/pkg/client"
 	"k8s.io/api/admission/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http.Request) {
@@ -55,28 +56,21 @@ func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http
 	if ar, err = handler.getAdmissionRequestSpec(body, w); err != nil {
 		log.Print("error deserializing admission request spec")
 		log.Fatal(err.Error())
-		http.Error(w, "error on deserializing body", http.StatusBadRequest)
+		h.errorResponse(w, handler.response)
 		return
 	}
 
 	if q, err = handler.getQuarantineSpec(ar, w); err != nil {
 		log.Print("error deserializing quarantine spec")
 		log.Fatal(err.Error())
-		http.Error(w, "error on deserializing body", http.StatusBadRequest)
+		h.errorResponse(w, handler.response)
 		return
 	}
 
 	if pod, err = cli.GetControllerPod(client.New().TypedClient); err != nil {
 		log.Print("error on getting controller pod")
 		log.Fatal(err.Error())
-		http.Error(w, "no validate", http.StatusBadRequest)
-		return
-	}
-
-	if err := handler.parseAdmissionResponse(); err != nil {
-		log.Print("admission validation failed")
-		log.Fatal(err.Error())
-		http.Error(w, "admission validation failed", http.StatusBadRequest)
+		h.errorResponse(w, handler.response)
 		return
 	}
 
@@ -88,7 +82,32 @@ func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http
 	if res, err = json.Marshal(handler.response); err != nil {
 		log.Print("failed to parse admission response")
 		log.Fatal(err.Error())
+		h.errorResponse(w, handler.response)
+	}
+
+	if _, err := w.Write(res); err != nil {
+		log.Print("failed to write admission response")
+		log.Fatal(err.Error())
+		http.Error(w, "admission reponse writing failed", http.StatusBadRequest)
+	}
+}
+
+func (h *QuarantineHTTPHandler) errorResponse(w http.ResponseWriter, response *v1beta1.AdmissionReview) {
+
+	var res []byte
+	var err error
+
+	if res, err = json.Marshal(response); err != nil {
+		log.Print("failed to parse admission response")
+		log.Fatal(err.Error())
 		http.Error(w, "admission response parsing failed", http.StatusBadRequest)
+	}
+
+	response.Response = &v1beta1.AdmissionResponse{
+		Allowed: false,
+		Result: &metav1.Status{
+			Message: "Quarantine Controller is currently running on a node which is requested for isolation",
+		},
 	}
 
 	if _, err := w.Write(res); err != nil {

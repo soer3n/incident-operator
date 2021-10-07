@@ -10,15 +10,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (qh *QuarantineHandler) parseAdmissionResponse() error {
-
-	if err := json.Unmarshal(qh.body, qh.response); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (qh *QuarantineHandler) controllerShouldBeRescheduled(pod *corev1.Pod, q *v1alpha1.Quarantine) bool {
 
 	for _, n := range q.Spec.Nodes {
