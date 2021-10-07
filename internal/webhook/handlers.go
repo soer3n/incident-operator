@@ -50,24 +50,28 @@ func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http
 
 	if ar, err = handler.getAdmissionRequestSpec(body, w); err != nil {
 		log.Fatal("error deserializing admission request spec")
+		log.Fatal(err.Error())
 		http.Error(w, "error on deserializing body", http.StatusBadRequest)
 		return
 	}
 
 	if q, err = handler.getQuarantineSpec(ar, w); err != nil {
 		log.Fatal("error deserializing quarantine spec")
+		log.Fatal(err.Error())
 		http.Error(w, "error on deserializing body", http.StatusBadRequest)
 		return
 	}
 
 	if pod, err = cli.GetControllerPod(client.New().TypedClient); err != nil {
 		log.Fatal("error on getting controller pod")
+		log.Fatal(err.Error())
 		http.Error(w, "no validate", http.StatusBadRequest)
 		return
 	}
 
 	if err := handler.parseAdmissionResponse(); err != nil {
 		log.Fatal("admission validation failed")
+		log.Fatal(err.Error())
 		http.Error(w, "admission validation failed", http.StatusBadRequest)
 		return
 	}
@@ -79,11 +83,13 @@ func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http
 
 	if res, err = json.Marshal(handler.response); err != nil {
 		log.Fatal("failed to parse admission response")
+		log.Fatal(err.Error())
 		http.Error(w, "admission response parsing failed", http.StatusBadRequest)
 	}
 
 	if _, err := w.Write(res); err != nil {
 		log.Fatal("failed to write admission response")
+		log.Fatal(err.Error())
 		http.Error(w, "admission reponse writing failed", http.StatusBadRequest)
 	}
 }
