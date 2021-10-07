@@ -24,7 +24,7 @@ import (
 
 const (
 	bitSize    = 4096
-	commonName = "quarantine-webhook.dev.svc"
+	commonName = "Admission Controller Webhook"
 )
 
 func generateWebhookCert() (*Cert, error) {
@@ -113,8 +113,9 @@ func (w *Cert) create(CommonName string) error {
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
 		Subject: pkix.Name{
-			CommonName: CommonName,
+			CommonName: commonName,
 		},
+		DNSNames:     []string{CommonName},
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().AddDate(10, 0, 0),
 		SubjectKeyId: []byte{1, 2, 3, 4, 6},
