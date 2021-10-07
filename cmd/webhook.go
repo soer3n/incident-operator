@@ -18,6 +18,7 @@ func NewWebhookCmd() *cobra.Command {
 	cmd.AddCommand(newWebhookServeCmd())
 	cmd.AddCommand(newWebhookCreateCertsCmd())
 	cmd.AddCommand(newWebhookInstallCertsCmd())
+	cmd.AddCommand(newWebhookDeleteCertsCmd())
 	return cmd
 }
 
@@ -40,6 +41,22 @@ func newWebhookInstallCertsCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 		},
 	}
+}
+
+func newWebhookDeleteCertsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "delete",
+		Short: "delete resources related to installed webhook",
+		Long:  `webhook application`,
+		Run: func(cmd *cobra.Command, args []string) {
+			namespace, _ := cmd.Flags().GetString("namespace")
+			webhook.DeleteWebhook(namespace)
+		},
+	}
+
+	cmd.PersistentFlags().String("namespace", "dev", "namespace for deploying resources")
+
+	return cmd
 }
 
 func newWebhookCreateCertsCmd() *cobra.Command {

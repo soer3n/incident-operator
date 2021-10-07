@@ -43,9 +43,13 @@ func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http
 	}
 
 	handler := QuarantineHandler{
-		body:     body,
-		response: &v1beta1.AdmissionReview{},
-		client:   client.New().TypedClient,
+		body: body,
+		response: &v1beta1.AdmissionReview{
+			Response: &v1beta1.AdmissionResponse{
+				Allowed: true,
+			},
+		},
+		client: client.New().TypedClient,
 	}
 
 	if ar, err = handler.getAdmissionRequestSpec(body, w); err != nil {

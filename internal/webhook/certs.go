@@ -108,6 +108,42 @@ func InstallWebhook(subj, namespace string) error {
 	return nil
 }
 
+// DeleteWebhook represents func for deleting resources for a functional webhook
+func DeleteWebhook(namespace string) error {
+
+	var err error
+
+	c := client.New().TypedClient
+
+	getOpts := metav1.GetOptions{}
+	_, err = c.CoreV1().Secrets(namespace).Get(context.TODO(), "incident-webhook", getOpts)
+
+	if err != nil {
+		return err
+	}
+
+	delOpts := metav1.DeleteOptions{}
+	err = c.CoreV1().Secrets(namespace).Delete(context.TODO(), "incident-webhook", delOpts)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = c.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(context.TODO(), "quarantine", getOpts)
+
+	if err != nil {
+		return err
+	}
+
+	err = c.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(context.TODO(), "quarantine", delOpts)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (w *Cert) create(CommonName string) error {
 
 	cert := &x509.Certificate{
