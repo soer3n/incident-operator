@@ -2,12 +2,13 @@ package webhook
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+
+	"github.com/prometheus/common/log"
 )
 
 const (
@@ -24,7 +25,7 @@ func RunWebhookServer() error {
 	server := newWebhookServer()
 
 	go func() {
-		log.Print("Starting webhook server...")
+		log.Info("Starting webhook server...")
 		log.Fatal(server.ListenAndServeTLS(certPath, keyPath))
 	}()
 
@@ -33,7 +34,7 @@ func RunWebhookServer() error {
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 	<-signalChan
 
-	log.Print("Got shutdown signal, shutting down webhook server gracefully...")
+	log.Info("Got shutdown signal, shutting down webhook server gracefully...")
 	return server.Shutdown(context.Background())
 }
 
