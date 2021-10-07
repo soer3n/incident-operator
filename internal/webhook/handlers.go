@@ -72,7 +72,6 @@ func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http
 
 	if !handler.controllerShouldBeRescheduled(pod, q) {
 		log.Info("controller pod is on a valid node")
-		return
 	}
 
 	if res, err = json.Marshal(handler.response); err != nil {
@@ -81,9 +80,5 @@ func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
-	if _, err := w.Write(res); err != nil {
-		log.Error("failed to write admission response")
-		log.Error(err.Error())
-		http.Error(w, "admission reponse writing failed", http.StatusBadRequest)
-	}
+	w.Write(res)
 }
