@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	log "github.com/golang/glog"
+	"github.com/prometheus/common/log"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
 	"github.com/soer3n/incident-operator/internal/cli"
