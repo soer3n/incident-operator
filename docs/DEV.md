@@ -1,6 +1,6 @@
 # Development
 
-There repo contains a okteto.yml which can be used to play with the components of this project in a kubernetes cluster. For running the webhook server you need to generate a ca and client cert by yourself at the moment. 
+There repo contains a okteto.yml which can be used to play with the components of this project in a kubernetes cluster. For running the webhook server you need to generate a ca and client cert by yourself at the moment. For debugging there is also a config file for vscode.
 
 # running local
 
