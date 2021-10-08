@@ -4,6 +4,8 @@ There repo contains a okteto.yml which can be used to play with the components o
 
 # running local
 
+You have to run it either local or you have to build an image and push it to your own account/repository. For the second way only docker is needed. If you want to run it local you need to install [golang](https://golang.org/doc/install) if not already done and [operator-sdk](https://sdk.operatorframework.io/docs/installation/).
+
 ```
 
 # Install the CRDs

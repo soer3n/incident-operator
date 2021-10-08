@@ -5,8 +5,6 @@ This operator is for managing incidents in clusters by controllers and custom re
 
 ## Installation
 
-For now there is no docker image neither for the operator nor for the planned web backend. So you have to run it either local or you have to build an image and push it to your own account/repository. For the second way only docker is needed. If you want to run it local you need to install [golang](https://golang.org/doc/install) if not already done and [operator-sdk](https://sdk.operatorframework.io/docs/installation/).
-
 ```
 
 helm repo add charts https://soer3n.github.io/charts/charts
