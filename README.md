@@ -9,30 +9,10 @@ For now there is no docker image neither for the operator nor for the planned we
 
 ```
 
-# Install the CRDs
-make install
-
-
-# Building and pushing as an image to private registry
-export IMG="image_name:image_tag"
-make docker-build docker-push
-
-# create image pull secret if needed (if private registry is used)
-kubectl create secret generic harbor-registry-secret -n helm --from-file=.dockerconfigjson=harbor.json --type=kubernetes.io/dockerconfigjson
-
-# Deploy the built operator
-kubectl apply -f deploy/rbac.yaml
-cat deploy/operator.yaml | envsubst | kubectl apply -f -
-
-########
-## OR ##
-########
-
-# Run it local
-make run
+helm repo add charts https://soer3n.github.io/charts/charts
+helm upgrade --install incident-operator charts/incident-operator
 
 ```
-
 
 ## Architecture
 
