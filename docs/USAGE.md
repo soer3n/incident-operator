@@ -1,6 +1,6 @@
 # exemplary situation
 
-There are two worker nodes with respectively one daemonset and deployment deployed in a kubernetes cluster.
+There are two worker nodes with respectively one daemonset and deployment in a kubernetes cluster.
 
 ```
 
@@ -44,7 +44,7 @@ loki-stack-promtail-9sfzl   1/1     Running   0          57s     xx.xx.xx.xx   m
 loki-stack-promtail-dg4sf   1/1     Running   0          2m12s   xx.xx.xx.xx   mngt-mngt-pool-7c46bb775f-fghln   <none>           <none>
 loki-stack-promtail-hct2x   1/1     Running   0          36s     xx.xx.xx.xx   mngt-mngt-pool-7c46bb775f-jpxv9   <none>           <none>
 
-$ kubectl get pod -A -l quarantine=true -o wide
+$ kubectl get pod -A -l ops.soer3n.info/quarantine=true -o wide
 NAMESPACE     NAME                        READY   STATUS    RESTARTS   AGE     IP            NODE                              NOMINATED NODE   READINESS GATES
 kube-system   quarantine-debug            1/1     Running   0          2m44s   xx.xx.xx.xx   mngt-mngt-pool-7c46bb775f-fghln   <none>    <none>
 default       loki-stack-promtail-dg4sf   1/1     Running   0          3m55s   xx.xx.xx.xx   mngt-mngt-pool-7c46bb775f-fghln   <none>    <none>
