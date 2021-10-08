@@ -2,8 +2,9 @@ name: Release
 
 on:
   create:
-    tags:
-    - 'v*'
+    release:
+      types:
+      - created
 
 jobs:
 
