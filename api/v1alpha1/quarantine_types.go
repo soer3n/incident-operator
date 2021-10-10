@@ -47,6 +47,7 @@ type Resource struct {
 	Type      string `json:"type,omitempty"`
 	Name      string `json:"name,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
+	Keep      bool   `json:"keep,omitempty"`
 }
 
 // Debug defines a debug pod configuration

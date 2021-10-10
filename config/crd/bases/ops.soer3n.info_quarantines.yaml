@@ -68,6 +68,8 @@ spec:
                 items:
                   description: Resource defines a workload to isolate on a node
                   properties:
+                    keep:
+                      type: boolean
                     name:
                       type: string
                     namespace:

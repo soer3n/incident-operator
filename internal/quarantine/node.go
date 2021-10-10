@@ -91,6 +91,7 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 				n.Daemonsets = append(n.Daemonsets, Daemonset{
 					Name:      v.Name,
 					Namespace: v.Namespace,
+					Keep:      v.Keep,
 				})
 
 			}
@@ -98,6 +99,7 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 			n.Daemonsets = append(n.Daemonsets, Daemonset{
 				Name:      r.Name,
 				Namespace: r.Namespace,
+				Keep:      r.Keep,
 			})
 		case deploymentType:
 			for _, v := range n.Deployments {
@@ -107,12 +109,14 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 				n.Deployments = append(n.Deployments, Deployment{
 					Name:      v.Name,
 					Namespace: v.Namespace,
+					Keep:      v.Keep,
 				})
 			}
 
 			n.Deployments = append(n.Deployments, Deployment{
 				Name:      r.Name,
 				Namespace: r.Namespace,
+				Keep:      r.Keep,
 			})
 		}
 	}

@@ -38,10 +38,12 @@ type Debug struct {
 type Deployment struct {
 	Name      string
 	Namespace string
+	Keep      bool
 }
 
 // Daemonset represents a configuration for a daemonset whose pod which is on an affected node should be isolated
 type Daemonset struct {
 	Name      string
 	Namespace string
+	Keep      bool
 }

@@ -27,6 +27,20 @@ func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode
 		return err
 	}
 
+	if ds.Keep {
+		obj.Spec.Template.Spec.Tolerations = append(obj.Spec.Template.Spec.Tolerations, corev1.Toleration{
+			Key:    quarantineTaintKey,
+			Value:  quarantineTaintValue,
+			Effect: quarantineTaintEffect,
+		})
+
+		updateOpts := metav1.UpdateOptions{}
+
+		if _, err = c.AppsV1().DaemonSets(ds.Namespace).Update(context.TODO(), obj, updateOpts); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

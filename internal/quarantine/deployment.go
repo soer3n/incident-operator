@@ -25,7 +25,7 @@ func (d Deployment) isolatePod(c kubernetes.Interface, node string, isolatedNode
 		return err
 	}
 
-	if isolatedNode {
+	if d.Keep {
 		if err = updatePod(c, obj.Spec.Selector.MatchLabels, node, d.Namespace, false, true); err != nil {
 			return err
 		}
