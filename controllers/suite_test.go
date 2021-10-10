@@ -19,7 +19,9 @@ package controllers
 
 import (
 	"context"
-	"math/rand"
+	"crypto/rand"
+	"math/big"
+	mr "math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -112,7 +114,7 @@ var _ = AfterSuite(func() {
 })
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
+	mr.Seed(time.Now().UnixNano())
 }
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
@@ -120,7 +122,8 @@ var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz1234567890")
 func randStringRunes(n int) string {
 	b := make([]rune, n)
 	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+		n, _ := rand.Int(rand.Reader, (big.NewInt(7)))
+		b[i] = letterRunes[n.Uint64()]
 	}
 	return string(b)
 }

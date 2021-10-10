@@ -1,13 +1,17 @@
 package main
 
 import (
+	"log"
+
 	appcmd "github.com/soer3n/incident-operator/cmd"
 	"github.com/spf13/cobra"
 )
 
 func main() {
 	command := NewRootCmd()
-	command.Execute()
+	if err := command.Execute(); err != nil {
+		log.Fatal(err.Error())
+	}
 }
 
 //NewRootCmd represents the root command manager

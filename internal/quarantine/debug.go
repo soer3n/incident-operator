@@ -87,7 +87,7 @@ func (dg Debug) remove(c kubernetes.Interface, name, namespace string) error {
 	getOpts := metav1.GetOptions{}
 
 	if _, err = c.CoreV1().Pods(namespace).Get(context.TODO(), name, getOpts); err != nil {
-		return nil
+		return err
 	}
 
 	deleteOpts := metav1.DeleteOptions{}

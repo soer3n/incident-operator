@@ -28,7 +28,9 @@ func newWebhookServeCmd() *cobra.Command {
 		Short: "runs backend for webhook",
 		Long:  `webhook application`,
 		Run: func(cmd *cobra.Command, args []string) {
-			webhook.RunWebhookServer()
+			if err := webhook.RunWebhookServer(); err != nil {
+				log.Fatal(err.Error())
+			}
 		},
 	}
 }
@@ -49,8 +51,15 @@ func newWebhookDeleteCertsCmd() *cobra.Command {
 		Short: "delete resources related to installed webhook",
 		Long:  `webhook application`,
 		Run: func(cmd *cobra.Command, args []string) {
-			namespace, _ := cmd.Flags().GetString("namespace")
-			webhook.DeleteWebhook(namespace)
+			namespace, err := cmd.Flags().GetString("namespace")
+
+			if err != nil {
+				log.Fatal(err.Error())
+			}
+
+			if err := webhook.DeleteWebhook(namespace); err != nil {
+				log.Fatal(err.Error())
+			}
 		},
 	}
 

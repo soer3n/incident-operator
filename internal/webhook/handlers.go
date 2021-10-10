@@ -80,5 +80,7 @@ func (h *QuarantineHTTPHandler) quarantineHandler(w http.ResponseWriter, r *http
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
-	w.Write(res)
+	if _, err := w.Write(res); err != nil {
+		log.Fatal(err.Error())
+	}
 }

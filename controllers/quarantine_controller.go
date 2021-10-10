@@ -84,7 +84,7 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	if r.handleFinalizer(instance, q, reqLogger); err != nil {
+	if err = r.handleFinalizer(instance, q, reqLogger); err != nil {
 		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "finalizer", err.Error())
 	}
 

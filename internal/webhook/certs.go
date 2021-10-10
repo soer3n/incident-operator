@@ -47,16 +47,20 @@ func generateWebhookCert() (*Cert, error) {
 
 	caPEM := new(bytes.Buffer)
 
-	pem.Encode(caPEM, &pem.Block{
+	if err = pem.Encode(caPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
-	})
+	}); err != nil {
+		return webhookCert, err
+	}
 
 	caPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(caPrivKeyPEM, &pem.Block{
+	if err = pem.Encode(caPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
-	})
+	}); err != nil {
+		return webhookCert, err
+	}
 
 	webhookCert.Ca = CA{
 		Key:     caPrivKeyPEM.Bytes(),
@@ -178,16 +182,20 @@ func (w *Cert) create(CommonName string) error {
 	}
 
 	certPEM := new(bytes.Buffer)
-	pem.Encode(certPEM, &pem.Block{
+	if err = pem.Encode(certPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: certBytes,
-	})
+	}); err != nil {
+		return err
+	}
 
 	certPrivKeyPEM := new(bytes.Buffer)
-	pem.Encode(certPrivKeyPEM, &pem.Block{
+	if err = pem.Encode(certPrivKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(certPrivKey),
-	})
+	}); err != nil {
+		return err
+	}
 
 	w.Cert = certPEM.Bytes()
 	w.Key = certPrivKeyPEM.Bytes()

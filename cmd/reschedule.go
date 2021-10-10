@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"log"
 	"strings"
 
 	"github.com/soer3n/incident-operator/internal/cli"
@@ -20,7 +21,9 @@ func NewJobRescheduleCmd() *cobra.Command {
 				return
 			}
 
-			cli.RescheduleQuarantineController(strings.Split(excludedNodes, ","))
+			if err = cli.RescheduleQuarantineController(strings.Split(excludedNodes, ",")); err != nil {
+				log.Fatal(err.Error())
+			}
 		},
 	}
 
