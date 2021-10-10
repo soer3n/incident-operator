@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	v1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/kubernetes"
@@ -26,7 +27,15 @@ func (d Deployment) isolatePod(c kubernetes.Interface, node string, isolatedNode
 	}
 
 	if d.Keep {
-		if err = updatePod(c, obj.Spec.Selector.MatchLabels, node, d.Namespace, false, true); err != nil {
+		obj.Spec.Template.Spec.Tolerations = append(obj.Spec.Template.Spec.Tolerations, corev1.Toleration{
+			Key:    quarantineTaintKey,
+			Value:  quarantineTaintValue,
+			Effect: quarantineTaintEffect,
+		})
+
+		updateOpts := metav1.UpdateOptions{}
+
+		if _, err = c.AppsV1().Deployments(d.Namespace).Update(context.Background(), obj, updateOpts); err != nil {
 			return err
 		}
 	}
