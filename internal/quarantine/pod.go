@@ -37,30 +37,33 @@ func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName
 	for _, pod := range pods.Items {
 		if pod.Spec.NodeName == nodeName {
 
+			var currentPod *corev1.Pod
+			pod.DeepCopyInto(currentPod)
+
 			updateOpts := metav1.UpdateOptions{}
 
 			if updateLabels {
 				labels := map[string]string{}
 
-				for k, v := range pod.ObjectMeta.Labels {
+				for k, v := range currentPod.ObjectMeta.Labels {
 					labels[k] = quarantinePodSelector
 					labels[quarantinePodLabelPrefix+k] = v
 				}
 
 				labels[quarantinePodLabelPrefix+quarantinePodLabelKey] = quarantinePodLabelValue
 
-				pod.ObjectMeta.Labels = labels
+				currentPod.ObjectMeta.Labels = labels
 			}
 
 			if addToleration {
-				pod.Spec.Tolerations = append(pod.Spec.Tolerations, corev1.Toleration{
+				currentPod.Spec.Tolerations = append(pod.Spec.Tolerations, corev1.Toleration{
 					Key:    quarantineTaintKey,
 					Value:  quarantineTaintValue,
 					Effect: quarantineTaintEffect,
 				})
 			}
 
-			if _, err := c.CoreV1().Pods(namespace).Update(context.TODO(), &pod, updateOpts); err != nil {
+			if _, err = c.CoreV1().Pods(namespace).Update(context.TODO(), currentPod, updateOpts); err != nil {
 				return err
 			}
 		}

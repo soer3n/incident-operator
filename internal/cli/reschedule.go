@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	rescheduleStrategy  = ""
+	rescheduleStrategy  = "evict"
 	evictionKind        = "Eviction"
 	evictionSubresource = "pods/eviction"
 )
@@ -55,9 +55,9 @@ func RescheduleQuarantineController(excludedNodes []string) error {
 		return err
 	}
 
-	ev := evictions.NewPodEvictor(typedClient, policyGroupVersion, false, 1, excludedNodesObj, false)
+	ev := evictions.NewPodEvictor(typedClient, policyGroupVersion, false, 1, excludedNodesObj, false, false, true)
 
-	if success, err = ev.EvictPod(context.TODO(), pod, node); err != nil {
+	if success, err = ev.EvictPod(context.TODO(), pod, node, rescheduleStrategy); err != nil {
 		return err
 	}
 
