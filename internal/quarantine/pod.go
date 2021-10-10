@@ -14,7 +14,7 @@ const quarantinePodLabelPrefix = "ops.soer3n.info/"
 const quarantinePodLabelKey = "quarantine"
 const quarantinePodLabelValue = "true"
 
-func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName, namespace string) error {
+func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName, namespace string, updateLabels, addToleration bool) error {
 
 	var pods *corev1.PodList
 	var err error
@@ -37,22 +37,28 @@ func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName
 	for _, pod := range pods.Items {
 		if pod.Spec.NodeName == nodeName {
 
-			labels := map[string]string{}
 			updateOpts := metav1.UpdateOptions{}
 
-			for k, v := range pod.ObjectMeta.Labels {
-				labels[k] = quarantinePodSelector
-				labels[quarantinePodLabelPrefix+k] = v
+			if updateLabels {
+				labels := map[string]string{}
+
+				for k, v := range pod.ObjectMeta.Labels {
+					labels[k] = quarantinePodSelector
+					labels[quarantinePodLabelPrefix+k] = v
+				}
+
+				labels[quarantinePodLabelPrefix+quarantinePodLabelKey] = quarantinePodLabelValue
+
+				pod.ObjectMeta.Labels = labels
 			}
 
-			labels[quarantinePodLabelPrefix+quarantinePodLabelKey] = quarantinePodLabelValue
-
-			pod.ObjectMeta.Labels = labels
-			pod.Spec.Tolerations = append(pod.Spec.Tolerations, corev1.Toleration{
-				Key:    quarantineTaintKey,
-				Value:  quarantineTaintValue,
-				Effect: quarantineTaintEffect,
-			})
+			if addToleration {
+				pod.Spec.Tolerations = append(pod.Spec.Tolerations, corev1.Toleration{
+					Key:    quarantineTaintKey,
+					Value:  quarantineTaintValue,
+					Effect: quarantineTaintEffect,
+				})
+			}
 
 			if _, err := c.CoreV1().Pods(namespace).Update(context.TODO(), &pod, updateOpts); err != nil {
 				return err
@@ -69,7 +75,7 @@ func cleanupIsolatedPods(c kubernetes.Interface) error {
 	var err error
 
 	listOpts := metav1.ListOptions{
-		LabelSelector: quarantinePodLabelKey + "=" + quarantinePodLabelValue,
+		LabelSelector: quarantinePodLabelPrefix + quarantinePodLabelKey + "=" + quarantinePodLabelValue,
 	}
 
 	if pods, err = c.CoreV1().Pods("").List(context.TODO(), listOpts); err != nil {

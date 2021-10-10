@@ -26,19 +26,19 @@ func (n Node) prepare() error {
 
 	for _, d := range n.Deployments {
 
-		if err := d.isolatePod(client.New().TypedClient, n.Name); err != nil {
-			return err
-		}
-	}
-
-	if n.isolate {
-		if err := n.addTaint(); err != nil {
+		if err := d.isolatePod(client.New().TypedClient, n.Name, n.isolate); err != nil {
 			return err
 		}
 	}
 
 	if err := n.disableScheduling(); err != nil {
 		return err
+	}
+
+	if n.isolate {
+		if err := n.addTaint(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -70,7 +70,7 @@ func (n *Node) update() error {
 		}
 
 		if !ok {
-			if err := d.isolatePod(n.flags.Client, n.Name); err != nil {
+			if err := d.isolatePod(n.flags.Client, n.Name, n.isolate); err != nil {
 				return err
 			}
 		}

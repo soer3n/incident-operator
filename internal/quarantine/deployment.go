@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func (d Deployment) isolatePod(c kubernetes.Interface, node string) error {
+func (d Deployment) isolatePod(c kubernetes.Interface, node string, isolatedNode bool) error {
 
 	var obj *v1.Deployment
 	var err error
@@ -21,7 +21,17 @@ func (d Deployment) isolatePod(c kubernetes.Interface, node string) error {
 		return err
 	}
 
-	return updatePod(c, obj.Spec.Selector.MatchLabels, node, d.Namespace)
+	if err := updatePod(c, obj.Spec.Selector.MatchLabels, node, d.Namespace, true, true); err != nil {
+		return err
+	}
+
+	if isolatedNode {
+		if err = updatePod(c, obj.Spec.Selector.MatchLabels, node, d.Namespace, false, true); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (d Deployment) isAlreadyManaged(c kubernetes.Interface, node, namespace string) (bool, error) {

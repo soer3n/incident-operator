@@ -8,7 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -24,22 +23,10 @@ func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode
 		return err
 	}
 
-	if err = updatePod(c, obj.Spec.Selector.MatchLabels, node, ds.Namespace); err != nil {
+	if err = updatePod(c, obj.Spec.Selector.MatchLabels, node, ds.Namespace, true, true); err != nil {
 		return err
 	}
 
-	if isolatedNode {
-		patch := []byte(`{"spec":{"template":{"spec": {"tolerations": [{"key": "` + quarantineTaintKey + `", "operator": "Equal", "value": "` + quarantineTaintValue + `", "effect": "` + quarantineTaintEffect + `"}]}}}}`)
-
-		if _, err = c.AppsV1().DaemonSets(ds.Namespace).Patch(context.Background(),
-			ds.Name,
-			types.MergePatchType,
-			patch, metav1.PatchOptions{}); err != nil {
-			return err
-		}
-
-		return nil
-	}
 	return nil
 }
 
