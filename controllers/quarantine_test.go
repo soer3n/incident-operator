@@ -70,10 +70,6 @@ var _ = Context("Create a quarantine resource", func() {
 			Expect(err).NotTo(HaveOccurred(), "failed to delete quarantine resource")
 
 			By("by deletion of namespace test should finish successfully")
-			quarantineNamespace = &v1.Namespace{
-				TypeMeta:   metav1.TypeMeta{},
-				ObjectMeta: metav1.ObjectMeta{Name: namespace},
-			}
 
 			err = testClient.Delete(context.Background(), quarantineNamespace)
 			Expect(err).NotTo(HaveOccurred(), "failed to delete namespace for testing")
