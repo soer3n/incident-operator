@@ -1,6 +1,7 @@
 package quarantine
 
 import (
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/kubectl/pkg/cmd/util"
@@ -13,6 +14,7 @@ type Quarantine struct {
 	Debug      Debug
 	isActive   bool
 	conditions []metav1.Condition
+	logger     logr.Logger
 }
 
 // Node represents configuration for isolating a node

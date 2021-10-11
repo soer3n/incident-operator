@@ -3,6 +3,7 @@ package quarantine
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -27,7 +28,7 @@ func (dg Debug) deploy(c kubernetes.Interface, nodeName string) error {
 	*autoMountToken = false
 	debugPod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   debugPodName,
+			Name:   debugPodName + "-" + nodeName,
 			Labels: map[string]string{},
 		},
 		Spec: corev1.PodSpec{
@@ -80,21 +81,23 @@ func (dg Debug) deploy(c kubernetes.Interface, nodeName string) error {
 	return nil
 }
 
-func (dg Debug) remove(c kubernetes.Interface, name, namespace string) error {
+func (dg Debug) remove(c kubernetes.Interface, nodeName string, logger logr.Logger) {
 
 	var err error
 
 	getOpts := metav1.GetOptions{}
 
-	if _, err = c.CoreV1().Pods(namespace).Get(context.TODO(), name, getOpts); err != nil {
-		return err
+	if _, err = c.CoreV1().Pods(dg.Namespace).Get(context.TODO(), debugPodName+"-"+nodeName, getOpts); err != nil {
+		logger.Info("debug pod not found", "node", nodeName)
+		return
 	}
 
 	deleteOpts := metav1.DeleteOptions{}
 
-	if err = c.CoreV1().Pods(namespace).Delete(context.TODO(), name, deleteOpts); err != nil {
-		return err
+	if err = c.CoreV1().Pods(dg.Namespace).Delete(context.TODO(), debugPodName+"-"+nodeName, deleteOpts); err != nil {
+		logger.Info("cannot delete debug pod", "node", nodeName)
+		return
 	}
 
-	return nil
+	logger.Info("debug pod deleted", "node", nodeName)
 }

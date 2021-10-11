@@ -19,6 +19,16 @@ func (n Node) prepare() error {
 
 	for _, ds := range n.Daemonsets {
 
+		ok, err := ds.isAlreadyManaged(n.flags.Client, n.Name, ds.Namespace)
+
+		if err != nil {
+			return err
+		}
+
+		if ok {
+			continue
+		}
+
 		if err := ds.isolatePod(client.New().TypedClient, n.Name, n.isolate); err != nil {
 			return err
 		}
@@ -128,7 +138,8 @@ func (n *Node) parseFlags() {
 	n.flags = &drain.Helper{
 		IgnoreAllDaemonSets: true,
 		DisableEviction:     false,
-		PodSelector:         "!" + quarantinePodSelector,
+		DeleteEmptyDirData:  true,
+		PodSelector:         "!" + quarantinePodLabelPrefix + quarantinePodSelector,
 		Force:               false,
 		Ctx:                 context.TODO(),
 		Client:              client.New().TypedClient,

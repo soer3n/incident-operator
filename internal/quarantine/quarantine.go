@@ -4,7 +4,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/prometheus/common/log"
+	"github.com/go-logr/logr"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/kubectl/pkg/cmd/util"
@@ -23,7 +23,7 @@ const quarantineStatusActiveKey = "active"
 const quarantineStatusActiveMessage = "success"
 
 // New represents an initialization of a quarantine struct
-func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
+func New(s *v1alpha1.Quarantine, reqLogger logr.Logger) (*Quarantine, error) {
 
 	debugImage := debugPodImage
 	debugNamespace := debugPodNamespace
@@ -44,6 +44,7 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 		},
 		isActive:   false,
 		conditions: s.Status.Conditions,
+		logger:     reqLogger,
 	}
 	nodes := []*Node{}
 
@@ -85,7 +86,11 @@ func New(s *v1alpha1.Quarantine) (*Quarantine, error) {
 func (q *Quarantine) Prepare() error {
 
 	for _, n := range q.Nodes {
+
+		q.logger.Info("preparing node...", "node", n.Name)
+
 		if q.Debug.Enabled {
+			q.logger.Info("deploying debug pod...", "node", n.Name)
 			if err := q.Debug.deploy(n.flags.Client, n.Name); err != nil {
 				return err
 			}
@@ -93,13 +98,17 @@ func (q *Quarantine) Prepare() error {
 
 		if ok, err := n.isAlreadyIsolated(); !ok {
 			if err != nil {
-				log.Info(err.Error())
+				q.logger.Info(err.Error())
 			}
 
+			q.logger.Info("preparing node...", "node", n.Name)
 			if err := n.prepare(); err != nil {
 				return err
 			}
+			continue
 		}
+
+		q.logger.Info("already isolated...", "node", n.Name)
 	}
 
 	return nil
@@ -109,6 +118,8 @@ func (q *Quarantine) Prepare() error {
 func (q *Quarantine) Start() error {
 
 	for _, n := range q.Nodes {
+
+		q.logger.Info("deschedule pods...", "node", n.Name)
 		if err := n.deschedulePods(); err != nil {
 			return err
 		}
@@ -142,26 +153,32 @@ func (q *Quarantine) Stop() error {
 		return errors.New("no nodes detected")
 	}
 
-	if err := q.Debug.remove(q.Nodes[0].flags.Client, debugPodName, q.Debug.Namespace); err != nil {
-		return err
-	}
-
 	for _, n := range q.Nodes {
+
+		if q.Debug.Enabled {
+			q.logger.Info("remove debug pods...")
+			q.Debug.remove(q.Nodes[0].flags.Client, n.Name, q.logger)
+		}
+
+		q.logger.Info("remove taint...", "node", n.Name)
 		if err := n.removeTaint(); err != nil {
 			return err
 		}
 
 		for _, ds := range n.Daemonsets {
+			q.logger.Info("remove toleration for daemonset...", "dameonset", ds.Name)
 			if err := ds.removeToleration(n.flags.Client); err != nil {
 				return err
 			}
 		}
 
+		q.logger.Info("enable scheduling again...", "node", n.Name)
 		if err := n.enableScheduling(); err != nil {
 			return err
 		}
 	}
 
+	q.logger.Info("clean up isolated pods...")
 	if err := cleanupIsolatedPods(q.Nodes[0].flags.Client); err != nil {
 		return err
 	}

@@ -23,7 +23,9 @@ func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode
 		return err
 	}
 
-	if err = updatePod(c, obj.Spec.Selector.MatchLabels, node, ds.Namespace, true, true); err != nil {
+	podMatchLabels := obj.Spec.Selector.DeepCopy()
+
+	if err = updatePod(c, podMatchLabels.MatchLabels, node, ds.Namespace, true, true); err != nil {
 		return err
 	}
 

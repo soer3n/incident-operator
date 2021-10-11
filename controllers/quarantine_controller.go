@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/go-logr/logr"
@@ -58,7 +59,7 @@ type QuarantineReconciler struct {
 // the user.
 //
 // For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.2/pkg/reconcile
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.9.0/pkg/reconcile
 func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("quarantines", req.NamespacedName)
 	_ = r.Log.WithValues("quarantinereq", req)
@@ -80,16 +81,12 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	var q *quarantine.Quarantine
 
-	if q, err = quarantine.New(instance); err != nil {
-		return ctrl.Result{}, err
+	if q, err = quarantine.New(instance, reqLogger); err != nil {
+		return ctrl.Result{RequeueAfter: time.Second * 5}, err
 	}
 
 	if err = r.handleFinalizer(instance, q, reqLogger); err != nil {
 		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "finalizer", err.Error())
-	}
-
-	if instance.GetDeletionTimestamp() != nil {
-		return ctrl.Result{}, nil
 	}
 
 	if q.IsActive() {
@@ -170,7 +167,7 @@ func (r *QuarantineReconciler) syncStatus(ctx context.Context, instance *v1alpha
 	meta.SetStatusCondition(&instance.Status.Conditions, condition)
 
 	if err := r.Status().Update(ctx, instance); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{RequeueAfter: time.Second * 5}, err
 	}
 
 	reqLogger.Info("Don't reconcile quarantine resource after sync.")
@@ -181,5 +178,6 @@ func (r *QuarantineReconciler) syncStatus(ctx context.Context, instance *v1alpha
 func (r *QuarantineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.Quarantine{}).
+		WithOptions(controller.Options{CacheSyncTimeout: time.Second * 20}).
 		Complete(r)
 }

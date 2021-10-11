@@ -37,7 +37,7 @@ func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName
 	for _, pod := range pods.Items {
 		if pod.Spec.NodeName == nodeName {
 
-			var currentPod *corev1.Pod
+			currentPod := &corev1.Pod{}
 			pod.DeepCopyInto(currentPod)
 
 			updateOpts := metav1.UpdateOptions{}
@@ -88,6 +88,7 @@ func cleanupIsolatedPods(c kubernetes.Interface) error {
 	deleteOpts := metav1.DeleteOptions{}
 
 	for _, pod := range pods.Items {
+
 		if err = c.CoreV1().Pods(pod.ObjectMeta.Namespace).Delete(context.TODO(), pod.ObjectMeta.Name, deleteOpts); err != nil {
 			return err
 		}
