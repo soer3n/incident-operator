@@ -26,5 +26,5 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.29
-          args: --issues-exit-code=1
+          args: --issues-exit-code=1 --timeout=5m0s
           only-new-issues: true
