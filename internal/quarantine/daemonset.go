@@ -99,8 +99,14 @@ func (ds Daemonset) isAlreadyManaged(c kubernetes.Interface, node, namespace str
 		LabelSelector: strings.Join(selectorStringList, ","),
 	}
 
-	if _, err = c.CoreV1().Pods(namespace).List(context.TODO(), listOpts); err != nil {
+	var podList *corev1.PodList
+
+	if podList, err = c.CoreV1().Pods(namespace).List(context.TODO(), listOpts); err != nil {
 		return false, err
+	}
+
+	if len(podList.Items) < 1 {
+		return false, nil
 	}
 
 	return true, nil
