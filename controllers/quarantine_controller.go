@@ -69,6 +69,8 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	err := r.Get(ctx, req.NamespacedName, instance)
 
+	reqLogger.Info("starting reconcile loop...")
+
 	if err != nil {
 		if errors.IsNotFound(err) {
 			reqLogger.Info("Quarantine resource not found. Ignoring since object must be deleted")
@@ -80,13 +82,23 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	var q *quarantine.Quarantine
+	var requeue bool
 
 	if q, err = quarantine.New(instance, reqLogger); err != nil {
-		return ctrl.Result{RequeueAfter: time.Second * 5}, err
+		return ctrl.Result{}, err
 	}
 
-	if err = r.handleFinalizer(instance, q, reqLogger); err != nil {
+	if requeue, err = r.handleFinalizer(instance, q, reqLogger); err != nil {
 		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "finalizer", err.Error())
+	}
+
+	if requeue {
+		reqLogger.Info("Update resource after changing finalizer.")
+		if err := r.Update(context.TODO(), instance); err != nil {
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{}, nil
 	}
 
 	if q.IsActive() {
@@ -114,47 +126,26 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionTrue, "running", "success")
 }
 
-func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, obj *quarantine.Quarantine, reqLogger logr.Logger) error {
+func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, obj *quarantine.Quarantine, reqLogger logr.Logger) (bool, error) {
 
 	isRepoMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
 	if isRepoMarkedToBeDeleted {
 		if err := obj.Stop(); err != nil {
-			return err
+			return true, err
 		}
 
 		controllerutil.RemoveFinalizer(instance, quarantineFinalizer)
 
-		if err := r.Update(context.TODO(), instance); err != nil {
-			return err
-		}
-
-		return nil
+		return true, nil
 	}
 
 	if !utils.Contains(instance.GetFinalizers(), quarantineFinalizer) {
 		reqLogger.Info("Adding Finalizer for the Quarantine Resource")
-		if err := r.addFinalizer(instance); err != nil {
-			reqLogger.Error(err, "Failed to add finalizer to Quarantine resource")
-			return err
-		}
-
-		if err := r.Update(context.Background(), instance); err != nil {
-			return err
-		}
+		controllerutil.AddFinalizer(instance, quarantineFinalizer)
+		return true, nil
 	}
 
-	return nil
-}
-
-func (r *QuarantineReconciler) addFinalizer(q *v1alpha1.Quarantine) error {
-
-	controllerutil.AddFinalizer(q, quarantineFinalizer)
-
-	// Update CR
-	if err := r.Update(context.TODO(), q); err != nil {
-		return err
-	}
-	return nil
+	return false, nil
 }
 
 func (r *QuarantineReconciler) syncStatus(ctx context.Context, instance *v1alpha1.Quarantine, reqLogger logr.Logger, stats metav1.ConditionStatus, reason, message string) (ctrl.Result, error) {
@@ -167,7 +158,7 @@ func (r *QuarantineReconciler) syncStatus(ctx context.Context, instance *v1alpha
 	meta.SetStatusCondition(&instance.Status.Conditions, condition)
 
 	if err := r.Status().Update(ctx, instance); err != nil {
-		return ctrl.Result{RequeueAfter: time.Second * 5}, err
+		return ctrl.Result{}, err
 	}
 
 	reqLogger.Info("Don't reconcile quarantine resource after sync.")
