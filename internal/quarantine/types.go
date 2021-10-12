@@ -27,6 +27,7 @@ type Node struct {
 	ioStreams   genericclioptions.IOStreams
 	factory     util.Factory
 	flags       *drain.Helper
+	logger      logr.Logger
 }
 
 // Debug represents a configuration for a debug pod

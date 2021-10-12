@@ -4,17 +4,20 @@ import (
 	"context"
 	"strings"
 
+	"github.com/go-logr/logr"
+
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 )
 
 var obj *v1.DaemonSet
 var err error
 
-func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode bool) error {
+func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
 
 	getOpts := metav1.GetOptions{}
 
@@ -40,6 +43,29 @@ func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode
 
 		if _, err = c.AppsV1().DaemonSets(ds.Namespace).Update(context.TODO(), obj, updateOpts); err != nil {
 			return err
+		}
+
+		labels, _ := ds.getLabelSelectorAsString(podMatchLabels)
+		listOpts := metav1.ListOptions{
+			Watch:         true,
+			LabelSelector: labels,
+		}
+
+		w, err := c.CoreV1().Pods(ds.Namespace).Watch(context.TODO(), listOpts)
+
+		if err != nil {
+			return err
+		}
+
+		defer w.Stop()
+
+		for {
+			e := <-w.ResultChan()
+
+			if e.Type == watch.Added || e.Type == watch.Deleted {
+				logger.Info("modified...")
+				return nil
+			}
 		}
 	}
 
@@ -86,17 +112,11 @@ func (ds Daemonset) isAlreadyManaged(c kubernetes.Interface, node, namespace str
 		return false, err
 	}
 
-	// define selector for getting wanted pod
-	selectorStringList := []string{}
-
-	for k, v := range obj.Spec.Selector.MatchLabels {
-		selectorStringList = append(selectorStringList, quarantinePodLabelPrefix+k+"="+v)
-	}
-
-	selectorStringList = append(selectorStringList, "kubernetes.io/hostname="+node)
+	labels, _ := ds.getLabelSelectorAsString(obj.Spec.Selector)
+	labels = labels + ",kubernetes.io/hostname=" + node
 
 	listOpts := metav1.ListOptions{
-		LabelSelector: strings.Join(selectorStringList, ","),
+		LabelSelector: labels,
 	}
 
 	var podList *corev1.PodList
@@ -110,4 +130,15 @@ func (ds Daemonset) isAlreadyManaged(c kubernetes.Interface, node, namespace str
 	}
 
 	return true, nil
+}
+
+func (ds Daemonset) getLabelSelectorAsString(podMatchLabels *metav1.LabelSelector) (string, error) {
+	// define selector for getting wanted pod
+	selectorStringList := []string{}
+
+	for k, v := range podMatchLabels.MatchLabels {
+		selectorStringList = append(selectorStringList, quarantinePodLabelPrefix+k+"="+v)
+	}
+
+	return strings.Join(selectorStringList, ","), nil
 }

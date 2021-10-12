@@ -85,16 +85,19 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	var requeue bool
 
 	if q, err = quarantine.New(instance, reqLogger); err != nil {
+		reqLogger.Error(err, "error in reconciling")
 		return ctrl.Result{}, err
 	}
 
 	if requeue, err = r.handleFinalizer(instance, q, reqLogger); err != nil {
+		reqLogger.Error(err, "error in reconciling")
 		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "finalizer", err.Error())
 	}
 
 	if requeue {
-		reqLogger.Info("Update resource after changing finalizer.")
+		reqLogger.Info("Update resource after modifying finalizer.")
 		if err := r.Update(context.TODO(), instance); err != nil {
+			reqLogger.Error(err, "error in reconciling")
 			return ctrl.Result{}, err
 		}
 
@@ -105,6 +108,7 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		reqLogger.Info("Quarantine already active. Update if needed.")
 
 		if err := q.Update(); err != nil {
+			reqLogger.Error(err, "error in reconciling")
 			return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "update", err.Error())
 		}
 
@@ -114,12 +118,14 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	reqLogger.Info("preparing...")
 
 	if err := q.Prepare(); err != nil {
+		reqLogger.Error(err, "error in reconciling")
 		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "prepare", err.Error())
 	}
 
 	reqLogger.Info("starting...")
 
 	if err := q.Start(); err != nil {
+		reqLogger.Error(err, "error in reconciling")
 		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "starting", err.Error())
 	}
 
@@ -128,8 +134,8 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, obj *quarantine.Quarantine, reqLogger logr.Logger) (bool, error) {
 
-	isRepoMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
-	if isRepoMarkedToBeDeleted {
+	isResourceMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
+	if isResourceMarkedToBeDeleted {
 		if err := obj.Stop(); err != nil {
 			return true, err
 		}
@@ -151,6 +157,7 @@ func (r *QuarantineReconciler) handleFinalizer(instance *v1alpha1.Quarantine, ob
 func (r *QuarantineReconciler) syncStatus(ctx context.Context, instance *v1alpha1.Quarantine, reqLogger logr.Logger, stats metav1.ConditionStatus, reason, message string) (ctrl.Result, error) {
 
 	if meta.IsStatusConditionPresentAndEqual(instance.Status.Conditions, quarantineStatusKey, stats) && instance.Status.Conditions[0].Message == message {
+		reqLogger.Info("Don't reconcile quarantine resource after sync.")
 		return ctrl.Result{}, nil
 	}
 
@@ -161,7 +168,7 @@ func (r *QuarantineReconciler) syncStatus(ctx context.Context, instance *v1alpha
 		return ctrl.Result{}, err
 	}
 
-	reqLogger.Info("Don't reconcile quarantine resource after sync.")
+	reqLogger.Info("reconcile quarantine resource after status sync.")
 	return ctrl.Result{}, nil
 }
 

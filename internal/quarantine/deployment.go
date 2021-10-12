@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/go-logr/logr"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,7 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func (d Deployment) isolatePod(c kubernetes.Interface, node string, isolatedNode bool) error {
+func (d Deployment) isolatePod(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
 
 	var obj *v1.Deployment
 	var err error

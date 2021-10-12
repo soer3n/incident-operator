@@ -63,6 +63,7 @@ func New(s *v1alpha1.Quarantine, reqLogger logr.Logger) (*Quarantine, error) {
 				ErrOut: os.Stdout,
 			},
 			factory: util.NewFactory(genericclioptions.NewConfigFlags(false)),
+			logger:  reqLogger,
 		}
 
 		if err := temp.mergeResources(s.Spec.Resources); err != nil {
@@ -101,7 +102,7 @@ func (q *Quarantine) Prepare() error {
 				q.logger.Info(err.Error())
 			}
 
-			q.logger.Info("preparing node...", "node", n.Name)
+			q.logger.Info("updating node...", "node", n.Name)
 			if err := n.prepare(); err != nil {
 				return err
 			}

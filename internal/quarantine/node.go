@@ -6,6 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/kubectl/pkg/drain"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
@@ -29,14 +30,14 @@ func (n Node) prepare() error {
 			continue
 		}
 
-		if err := ds.isolatePod(client.New().TypedClient, n.Name, n.isolate); err != nil {
+		if err := ds.isolatePod(client.New().TypedClient, n.Name, n.isolate, n.logger.WithValues("daemonset", ds.Name)); err != nil {
 			return err
 		}
 	}
 
 	for _, d := range n.Deployments {
 
-		if err := d.isolatePod(client.New().TypedClient, n.Name, n.isolate); err != nil {
+		if err := d.isolatePod(client.New().TypedClient, n.Name, n.isolate, n.logger.WithValues("deployment", d.Name)); err != nil {
 			return err
 		}
 	}
@@ -65,7 +66,7 @@ func (n *Node) update() error {
 		}
 
 		if !ok {
-			if err := ds.isolatePod(n.flags.Client, n.Name, n.isolate); err != nil {
+			if err := ds.isolatePod(n.flags.Client, n.Name, n.isolate, n.logger.WithValues("daemonset", ds.Name)); err != nil {
 				return err
 			}
 		}
@@ -80,7 +81,7 @@ func (n *Node) update() error {
 		}
 
 		if !ok {
-			if err := d.isolatePod(n.flags.Client, n.Name, n.isolate); err != nil {
+			if err := d.isolatePod(n.flags.Client, n.Name, n.isolate, n.logger.WithValues("deployment", d.Name)); err != nil {
 				return err
 			}
 		}
@@ -241,11 +242,31 @@ func (n Node) updateNodeAPIObject(nodeObj *corev1.Node) error {
 
 	opts := metav1.UpdateOptions{}
 
-	if _, err = client.New().TypedClient.CoreV1().Nodes().Update(context.Background(), nodeObj, opts); err != nil {
+	if _, err = client.New().TypedClient.CoreV1().Nodes().Update(context.TODO(), nodeObj, opts); err != nil {
 		return err
 	}
 
-	return nil
+	listOpts := metav1.ListOptions{
+		Watch:         true,
+		LabelSelector: "kubernetes.io/hostname=" + n.Name,
+	}
+
+	w, err := client.New().TypedClient.CoreV1().Nodes().Watch(context.TODO(), listOpts)
+
+	if err != nil {
+		return err
+	}
+
+	defer w.Stop()
+
+	for {
+		e := <-w.ResultChan()
+
+		if e.Type == watch.Added || e.Type == watch.Deleted {
+			n.logger.Info("modified...", "node", n.Name)
+			return nil
+		}
+	}
 }
 
 func (n Node) isAlreadyIsolated() (bool, error) {
