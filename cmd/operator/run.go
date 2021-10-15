@@ -1,4 +1,4 @@
-package cli
+package operator
 
 import (
 	"flag"
@@ -33,7 +33,7 @@ func init() {
 }
 
 // RunOperator represents starting the quarantine operator
-func RunOperator() {
+func Run() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string

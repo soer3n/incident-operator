@@ -10,6 +10,7 @@ require (
 	github.com/prometheus/common v0.26.0
 	github.com/soer3n/yaho v0.0.0-20211008185703-d974e70a33a2
 	github.com/spf13/cobra v1.1.3
+	github.com/stretchr/testify v1.7.0
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.6-0.20210908190839-cf92b39a962c // indirect
 	k8s.io/api v0.21.1

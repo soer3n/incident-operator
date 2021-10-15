@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubectl/pkg/cmd/util"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
@@ -23,7 +24,7 @@ const quarantineStatusActiveKey = "active"
 const quarantineStatusActiveMessage = "success"
 
 // New represents an initialization of a quarantine struct
-func New(s *v1alpha1.Quarantine, reqLogger logr.Logger) (*Quarantine, error) {
+func New(s *v1alpha1.Quarantine, c kubernetes.Interface, f util.Factory, reqLogger logr.Logger) (*Quarantine, error) {
 
 	debugImage := debugPodImage
 	debugNamespace := debugPodNamespace
@@ -42,6 +43,7 @@ func New(s *v1alpha1.Quarantine, reqLogger logr.Logger) (*Quarantine, error) {
 			Image:     debugImage,
 			Namespace: debugNamespace,
 		},
+		Client:     c,
 		isActive:   false,
 		conditions: s.Status.Conditions,
 		logger:     reqLogger,
@@ -62,7 +64,7 @@ func New(s *v1alpha1.Quarantine, reqLogger logr.Logger) (*Quarantine, error) {
 				Out:    os.Stdout,
 				ErrOut: os.Stdout,
 			},
-			factory: util.NewFactory(genericclioptions.NewConfigFlags(false)),
+			factory: f,
 			logger:  reqLogger,
 		}
 
@@ -70,7 +72,7 @@ func New(s *v1alpha1.Quarantine, reqLogger logr.Logger) (*Quarantine, error) {
 			return q, err
 		}
 
-		temp.parseFlags()
+		temp.parseFlags(c)
 		nodes = append(nodes, temp)
 	}
 
@@ -92,7 +94,7 @@ func (q *Quarantine) Prepare() error {
 
 		if q.Debug.Enabled {
 			q.logger.Info("deploying debug pod...", "node", n.Name)
-			if err := q.Debug.deploy(n.flags.Client, n.Name); err != nil {
+			if err := q.Debug.deploy(n.Flags.Client, n.Name); err != nil {
 				return err
 			}
 		}
@@ -158,7 +160,7 @@ func (q *Quarantine) Stop() error {
 
 		if q.Debug.Enabled {
 			q.logger.Info("remove debug pods...")
-			q.Debug.remove(q.Nodes[0].flags.Client, n.Name, q.logger)
+			q.Debug.remove(q.Nodes[0].Flags.Client, n.Name, q.logger)
 		}
 
 		q.logger.Info("remove taint...", "node", n.Name)
@@ -168,7 +170,7 @@ func (q *Quarantine) Stop() error {
 
 		for _, ds := range n.Daemonsets {
 			q.logger.Info("remove toleration for daemonset...", "dameonset", ds.Name)
-			if err := ds.removeToleration(n.flags.Client); err != nil {
+			if err := ds.removeToleration(n.Flags.Client); err != nil {
 				return err
 			}
 		}
@@ -180,7 +182,7 @@ func (q *Quarantine) Stop() error {
 	}
 
 	q.logger.Info("clean up isolated pods...")
-	if err := cleanupIsolatedPods(q.Nodes[0].flags.Client); err != nil {
+	if err := cleanupIsolatedPods(q.Nodes[0].Flags.Client); err != nil {
 		return err
 	}
 

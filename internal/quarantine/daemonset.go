@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -57,16 +56,7 @@ func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode
 			return err
 		}
 
-		defer w.Stop()
-
-		for {
-			e := <-w.ResultChan()
-
-			if e.Type == watch.Added || e.Type == watch.Deleted {
-				logger.Info("modified...")
-				return nil
-			}
-		}
+		waitForResource(w, logger)
 	}
 
 	return nil

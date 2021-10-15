@@ -5,12 +5,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/kubectl/pkg/drain"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
-	"github.com/soer3n/yaho/pkg/client"
 )
 
 const dsType = "daemonset"
@@ -20,7 +19,7 @@ func (n Node) prepare() error {
 
 	for _, ds := range n.Daemonsets {
 
-		ok, err := ds.isAlreadyManaged(n.flags.Client, n.Name, ds.Namespace)
+		ok, err := ds.isAlreadyManaged(n.Flags.Client, n.Name, ds.Namespace)
 
 		if err != nil {
 			return err
@@ -30,14 +29,14 @@ func (n Node) prepare() error {
 			continue
 		}
 
-		if err := ds.isolatePod(client.New().TypedClient, n.Name, n.isolate, n.logger.WithValues("daemonset", ds.Name)); err != nil {
+		if err := ds.isolatePod(n.Flags.Client, n.Name, n.isolate, n.logger.WithValues("daemonset", ds.Name)); err != nil {
 			return err
 		}
 	}
 
 	for _, d := range n.Deployments {
 
-		if err := d.isolatePod(client.New().TypedClient, n.Name, n.isolate, n.logger.WithValues("deployment", d.Name)); err != nil {
+		if err := d.isolatePod(n.Flags.Client, n.Name, n.isolate, n.logger.WithValues("deployment", d.Name)); err != nil {
 			return err
 		}
 	}
@@ -59,14 +58,14 @@ func (n *Node) update() error {
 
 	for _, ds := range n.Daemonsets {
 
-		ok, err := ds.isAlreadyManaged(n.flags.Client, n.Name, ds.Namespace)
+		ok, err := ds.isAlreadyManaged(n.Flags.Client, n.Name, ds.Namespace)
 
 		if err != nil {
 			return err
 		}
 
 		if !ok {
-			if err := ds.isolatePod(n.flags.Client, n.Name, n.isolate, n.logger.WithValues("daemonset", ds.Name)); err != nil {
+			if err := ds.isolatePod(n.Flags.Client, n.Name, n.isolate, n.logger.WithValues("daemonset", ds.Name)); err != nil {
 				return err
 			}
 		}
@@ -74,14 +73,14 @@ func (n *Node) update() error {
 
 	for _, d := range n.Deployments {
 
-		ok, err := d.isAlreadyManaged(n.flags.Client, n.Name, d.Namespace)
+		ok, err := d.isAlreadyManaged(n.Flags.Client, n.Name, d.Namespace)
 
 		if err != nil {
 			return err
 		}
 
 		if !ok {
-			if err := d.isolatePod(n.flags.Client, n.Name, n.isolate, n.logger.WithValues("deployment", d.Name)); err != nil {
+			if err := d.isolatePod(n.Flags.Client, n.Name, n.isolate, n.logger.WithValues("deployment", d.Name)); err != nil {
 				return err
 			}
 		}
@@ -135,15 +134,20 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 	return nil
 }
 
-func (n *Node) parseFlags() {
-	n.flags = &drain.Helper{
+func (n *Node) parseFlags(c kubernetes.Interface) {
+
+	if err != nil {
+		n.logger.Error(err, "failure on init node drain helper")
+	}
+
+	n.Flags = &drain.Helper{
 		IgnoreAllDaemonSets: true,
 		DisableEviction:     false,
 		DeleteEmptyDirData:  true,
 		PodSelector:         "!" + quarantinePodLabelPrefix + quarantinePodSelector,
 		Force:               false,
 		Ctx:                 context.TODO(),
-		Client:              client.New().TypedClient,
+		Client:              c,
 		ErrOut:              n.ioStreams.ErrOut,
 		Out:                 n.ioStreams.Out,
 	}
@@ -153,7 +157,7 @@ func (n Node) disableScheduling() error {
 
 	nodeObj := n.getNodeAPIObject()
 
-	if err := drain.RunCordonOrUncordon(n.flags, nodeObj, true); err != nil {
+	if err := drain.RunCordonOrUncordon(n.Flags, nodeObj, true); err != nil {
 		return err
 	}
 
@@ -164,7 +168,7 @@ func (n Node) enableScheduling() error {
 
 	nodeObj := n.getNodeAPIObject()
 
-	if err := drain.RunCordonOrUncordon(n.flags, nodeObj, false); err != nil {
+	if err := drain.RunCordonOrUncordon(n.Flags, nodeObj, false); err != nil {
 		return err
 	}
 
@@ -215,7 +219,7 @@ func (n Node) removeTaint() error {
 }
 
 func (n Node) deschedulePods() error {
-	if err := drain.RunNodeDrain(n.flags, n.Name); err != nil {
+	if err := drain.RunNodeDrain(n.Flags, n.Name); err != nil {
 		return err
 	}
 
@@ -229,7 +233,7 @@ func (n Node) getNodeAPIObject() *corev1.Node {
 
 	opts := metav1.GetOptions{}
 
-	if nodeObj, err = client.New().TypedClient.CoreV1().Nodes().Get(context.Background(), n.Name, opts); err != nil {
+	if nodeObj, err = n.Flags.Client.CoreV1().Nodes().Get(context.Background(), n.Name, opts); err != nil {
 		println(err.Error())
 	}
 
@@ -242,7 +246,7 @@ func (n Node) updateNodeAPIObject(nodeObj *corev1.Node) error {
 
 	opts := metav1.UpdateOptions{}
 
-	if _, err = client.New().TypedClient.CoreV1().Nodes().Update(context.TODO(), nodeObj, opts); err != nil {
+	if _, err = n.Flags.Client.CoreV1().Nodes().Update(context.TODO(), nodeObj, opts); err != nil {
 		return err
 	}
 
@@ -251,22 +255,15 @@ func (n Node) updateNodeAPIObject(nodeObj *corev1.Node) error {
 		LabelSelector: "kubernetes.io/hostname=" + n.Name,
 	}
 
-	w, err := client.New().TypedClient.CoreV1().Nodes().Watch(context.TODO(), listOpts)
+	w, err := n.Flags.Client.CoreV1().Nodes().Watch(context.TODO(), listOpts)
 
 	if err != nil {
 		return err
 	}
 
-	defer w.Stop()
+	waitForResource(w, n.logger)
 
-	for {
-		e := <-w.ResultChan()
-
-		if e.Type == watch.Added || e.Type == watch.Deleted {
-			n.logger.Info("modified...", "node", n.Name)
-			return nil
-		}
-	}
+	return nil
 }
 
 func (n Node) isAlreadyIsolated() (bool, error) {

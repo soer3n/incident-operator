@@ -50,5 +50,15 @@
             "program": "${workspaceFolder}/main.go",
             "args": ["run", "reschedule", "--excludedNodes", ""]
         },
+        {
+            "name": "Test quarantine package",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${workspaceFolder}/internal/quarantine/",
+            "env": {},
+            "args": [],
+            "showLog": true
+    },
     ]
 }

@@ -24,7 +24,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/soer3n/incident-operator/internal/cli"
+	"github.com/soer3n/incident-operator/cmd/operator"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -47,7 +47,7 @@ func newOperatorCmdServe() *cobra.Command {
 		Short: "runs the operator",
 		Long:  `apps operator`,
 		Run: func(cmd *cobra.Command, args []string) {
-			cli.RunOperator()
+			operator.Run()
 		},
 	}
 }

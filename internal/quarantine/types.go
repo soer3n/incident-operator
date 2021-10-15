@@ -4,6 +4,7 @@ import (
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubectl/pkg/cmd/util"
 	"k8s.io/kubectl/pkg/drain"
 )
@@ -12,6 +13,7 @@ import (
 type Quarantine struct {
 	Nodes      []*Node
 	Debug      Debug
+	Client     kubernetes.Interface
 	isActive   bool
 	conditions []metav1.Condition
 	logger     logr.Logger
@@ -26,7 +28,7 @@ type Node struct {
 	Deployments []Deployment
 	ioStreams   genericclioptions.IOStreams
 	factory     util.Factory
-	flags       *drain.Helper
+	Flags       *drain.Helper
 	logger      logr.Logger
 }
 

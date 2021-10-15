@@ -35,6 +35,8 @@ import (
 	"github.com/soer3n/incident-operator/internal/utils"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/kubectl/pkg/cmd/util"
 )
 
 const quarantineFinalizer = "finalizer.quarantine.ops.soer3n.info"
@@ -84,13 +86,21 @@ func (r *QuarantineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	var q *quarantine.Quarantine
 	var requeue bool
 
-	if q, err = quarantine.New(instance, reqLogger); err != nil {
-		reqLogger.Error(err, "error in reconciling")
+	factory := util.NewFactory(genericclioptions.NewConfigFlags(false))
+	clientset, err := factory.KubernetesClientSet()
+
+	if err != nil {
+		reqLogger.Error(err, "error on initialization of kubernetes clientset")
+		return ctrl.Result{}, err
+	}
+
+	if q, err = quarantine.New(instance, clientset, factory, reqLogger); err != nil {
+		reqLogger.Error(err, "error on initialization of quarantine struct")
 		return ctrl.Result{}, err
 	}
 
 	if requeue, err = r.handleFinalizer(instance, q, reqLogger); err != nil {
-		reqLogger.Error(err, "error in reconciling")
+		reqLogger.Error(err, "error on handling resource finalizer")
 		return r.syncStatus(context.Background(), instance, reqLogger, metav1.ConditionFalse, "finalizer", err.Error())
 	}
 
