@@ -45,9 +45,11 @@ func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode
 		}
 
 		labels, _ := ds.getLabelSelectorAsString(podMatchLabels)
+		timeout := int64(20)
 		listOpts := metav1.ListOptions{
-			Watch:         true,
-			LabelSelector: labels,
+			Watch:          true,
+			LabelSelector:  labels,
+			TimeoutSeconds: &timeout,
 		}
 
 		w, err := c.CoreV1().Pods(ds.Namespace).Watch(context.TODO(), listOpts)

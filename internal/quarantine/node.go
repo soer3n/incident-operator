@@ -250,9 +250,11 @@ func (n Node) updateNodeAPIObject(nodeObj *corev1.Node) error {
 		return err
 	}
 
+	timeout := int64(20)
 	listOpts := metav1.ListOptions{
-		Watch:         true,
-		LabelSelector: "kubernetes.io/hostname=" + n.Name,
+		Watch:          true,
+		LabelSelector:  "kubernetes.io/hostname=" + n.Name,
+		TimeoutSeconds: &timeout,
 	}
 
 	w, err := n.Flags.Client.CoreV1().Nodes().Watch(context.TODO(), listOpts)
