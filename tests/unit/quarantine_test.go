@@ -1,12 +1,9 @@
 package tests
 
 import (
-	"os"
 	"testing"
 
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/kubectl/pkg/drain"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	corev1 "k8s.io/api/core/v1"
@@ -17,22 +14,23 @@ import (
 	clienttesting "k8s.io/client-go/testing"
 
 	"github.com/soer3n/incident-operator/internal/quarantine"
-	"github.com/soer3n/incident-operator/tests/expect"
-	tmock "github.com/soer3n/incident-operator/tests/mocks"
+	mocks "github.com/soer3n/incident-operator/tests/mocks"
+	"github.com/soer3n/incident-operator/tests/testcases"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestInitQuarantine(t *testing.T) {
 
-	factoryMock := &tmock.K8SFactoryMock{}
+	factoryMock := &mocks.K8SFactoryMock{}
 	fakeClientset := fake.NewSimpleClientset()
 	factoryMock.On("KubernetesClientSet").Return(fakeClientset)
-	quarantineSpecs := expect.GetQuarantineInitSpec()
+	quarantineSpecs := testcases.GetQuarantineInitSpec()
 	logger := ctrl.Log.WithName("test")
 
 	assert := assert.New(t)
 
 	for _, spec := range quarantineSpecs {
+
 		quarantine, err := quarantine.New(spec, fake.NewSimpleClientset(), factoryMock, logger)
 		assert.Nil(err)
 		assert.NotNil(quarantine)
@@ -41,57 +39,18 @@ func TestInitQuarantine(t *testing.T) {
 
 func TestStartQuarantine(t *testing.T) {
 
-	factoryMock := &tmock.K8SFactoryMock{}
+	factoryMock := &mocks.K8SFactoryMock{}
 	fakeClientset := fake.NewSimpleClientset()
 	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("list", "pods", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
 		return true, &corev1.PodList{Items: []corev1.Pod{}}, nil
 	})
 	factoryMock.On("KubernetesClientSet").Return(fakeClientset)
 
-	quarantines := expect.GetQuaratineStartStructs(fakeClientset)
+	quarantines := testcases.GetQuarantineStartStructs(fakeClientset)
 
 	for _, obj := range quarantines {
 
-		for _, n := range obj.Nodes {
-			n.Isolate = false
-			n.Logger = ctrl.Log.WithName("test")
-			n.IOStreams = genericclioptions.IOStreams{
-				In:     os.Stdin,
-				Out:    os.Stdout,
-				ErrOut: os.Stdout,
-			}
-		}
-
-		quarantine := &quarantine.Quarantine{
-			Nodes: []*quarantine.Node{
-				{
-					Name:        "foo",
-					Isolate:     false,
-					Daemonsets:  []quarantine.Daemonset{},
-					Deployments: []quarantine.Deployment{},
-					Logger:      ctrl.Log.WithName("test"),
-					Flags: &drain.Helper{
-						Client: fakeClientset,
-					},
-					IOStreams: genericclioptions.IOStreams{
-						In:     os.Stdin,
-						Out:    os.Stdout,
-						ErrOut: os.Stdout,
-					},
-					Debug: quarantine.Debug{
-						Enabled: false,
-					},
-				},
-			},
-			Logger: ctrl.Log.WithName("test"),
-			Debug: quarantine.Debug{
-				Enabled: false,
-			},
-			Conditions: []metav1.Condition{},
-		}
-
-		err := quarantine.Start()
-
+		err := obj.Input.Start()
 		assert := assert.New(t)
 		assert.Nil(err)
 	}
@@ -99,7 +58,7 @@ func TestStartQuarantine(t *testing.T) {
 
 func TestPrepareQuarantine(t *testing.T) {
 
-	factoryMock := &tmock.K8SFactoryMock{}
+	factoryMock := &mocks.K8SFactoryMock{}
 	fakeClientset := fake.NewSimpleClientset()
 	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "nodes", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
 
@@ -127,61 +86,19 @@ func TestPrepareQuarantine(t *testing.T) {
 	})
 	factoryMock.On("KubernetesClientSet").Return(fakeClientset)
 
-	quarantine := &quarantine.Quarantine{
-		Nodes: []*quarantine.Node{
-			{
-				Name:        "foo",
-				Isolate:     false,
-				Daemonsets:  []quarantine.Daemonset{},
-				Deployments: []quarantine.Deployment{},
-				Logger:      ctrl.Log.WithName("test"),
-				Flags: &drain.Helper{
-					Client: fakeClientset,
-				},
-				IOStreams: genericclioptions.IOStreams{
-					In:     os.Stdin,
-					Out:    os.Stdout,
-					ErrOut: os.Stdout,
-				},
-				Debug: quarantine.Debug{
-					Enabled: false,
-				},
-			},
-			{
-				Name:        "bar",
-				Isolate:     false,
-				Daemonsets:  []quarantine.Daemonset{},
-				Deployments: []quarantine.Deployment{},
-				Logger:      ctrl.Log.WithName("test"),
-				Flags: &drain.Helper{
-					Client: fakeClientset,
-				},
-				IOStreams: genericclioptions.IOStreams{
-					In:     os.Stdin,
-					Out:    os.Stdout,
-					ErrOut: os.Stdout,
-				},
-				Debug: quarantine.Debug{
-					Enabled: false,
-				},
-			},
-		},
-		Logger: ctrl.Log.WithName("test"),
-		Debug: quarantine.Debug{
-			Enabled: false,
-		},
-		Conditions: []metav1.Condition{},
+	quarantines := testcases.GetQuarantinePrepareStructs(fakeClientset)
+
+	for _, obj := range quarantines {
+
+		err := obj.Input.Prepare()
+		assert := assert.New(t)
+		assert.Nil(err)
 	}
-
-	err := quarantine.Prepare()
-
-	assert := assert.New(t)
-	assert.Nil(err)
 }
 
 func TestStopQuarantine(t *testing.T) {
 
-	factoryMock := &tmock.K8SFactoryMock{}
+	factoryMock := &mocks.K8SFactoryMock{}
 	fakeClientset := fake.NewSimpleClientset()
 	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "nodes", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
 
@@ -221,112 +138,44 @@ func TestStopQuarantine(t *testing.T) {
 	})
 	factoryMock.On("KubernetesClientSet").Return(fakeClientset)
 
-	quarantine := &quarantine.Quarantine{
-		Nodes: []*quarantine.Node{
-			{
-				Name:        "foo",
-				Isolate:     false,
-				Daemonsets:  []quarantine.Daemonset{},
-				Deployments: []quarantine.Deployment{},
-				Logger:      ctrl.Log.WithName("test"),
-				Flags: &drain.Helper{
-					Client: fakeClientset,
-				},
-				IOStreams: genericclioptions.IOStreams{
-					In:     os.Stdin,
-					Out:    os.Stdout,
-					ErrOut: os.Stdout,
-				},
-				Debug: quarantine.Debug{
-					Enabled: false,
-				},
-			},
-		},
-		Logger: ctrl.Log.WithName("test"),
-		Debug: quarantine.Debug{
-			Enabled: false,
-		},
-		Conditions: []metav1.Condition{},
+	quarantines := testcases.GetQuarantineStopStructs(fakeClientset)
+
+	for _, obj := range quarantines {
+
+		err := obj.Input.Stop()
+		assert := assert.New(t)
+		assert.Nil(err)
 	}
-
-	err := quarantine.Stop()
-
-	assert := assert.New(t)
-	assert.Nil(err)
 }
 
 func TestUpdateQuarantine(t *testing.T) {
 
-	factoryMock := &tmock.K8SFactoryMock{}
+	factoryMock := &mocks.K8SFactoryMock{}
 	fakeClientset := fake.NewSimpleClientset()
 	factoryMock.On("KubernetesClientSet").Return(fakeClientset)
 
-	quarantine := &quarantine.Quarantine{
-		Nodes: []*quarantine.Node{
-			{
-				Name:        "foo",
-				Isolate:     false,
-				Daemonsets:  []quarantine.Daemonset{},
-				Deployments: []quarantine.Deployment{},
-				Logger:      ctrl.Log.WithName("test"),
-				Flags:       &drain.Helper{},
-				IOStreams: genericclioptions.IOStreams{
-					In:     os.Stdin,
-					Out:    os.Stdout,
-					ErrOut: os.Stdout,
-				},
-				Debug: quarantine.Debug{
-					Enabled: false,
-				},
-			},
-		},
-		Logger: ctrl.Log.WithName("test"),
-		Debug: quarantine.Debug{
-			Enabled: false,
-		},
-		Conditions: []metav1.Condition{},
+	quarantines := testcases.GetQuarantineStopStructs(fakeClientset)
+
+	for _, obj := range quarantines {
+
+		err := obj.Input.Update()
+		assert := assert.New(t)
+		assert.Nil(err)
 	}
-
-	err := quarantine.Update()
-
-	assert := assert.New(t)
-	assert.Nil(err)
 }
 
 func TestIsQuarantineActive(t *testing.T) {
 
-	factoryMock := &tmock.K8SFactoryMock{}
+	factoryMock := &mocks.K8SFactoryMock{}
 	fakeClientset := fake.NewSimpleClientset()
 	factoryMock.On("KubernetesClientSet").Return(fakeClientset)
 
-	quarantine := &quarantine.Quarantine{
-		Nodes: []*quarantine.Node{
-			{
-				Name:        "foo",
-				Isolate:     false,
-				Daemonsets:  []quarantine.Daemonset{},
-				Deployments: []quarantine.Deployment{},
-				Logger:      ctrl.Log.WithName("test"),
-				Flags:       &drain.Helper{},
-				IOStreams: genericclioptions.IOStreams{
-					In:     os.Stdin,
-					Out:    os.Stdout,
-					ErrOut: os.Stdout,
-				},
-				Debug: quarantine.Debug{
-					Enabled: false,
-				},
-			},
-		},
-		Logger: ctrl.Log.WithName("test"),
-		Debug: quarantine.Debug{
-			Enabled: false,
-		},
-		Conditions: []metav1.Condition{},
+	quarantines := testcases.GetQuarantineIsActiveStructs()
+
+	for _, obj := range quarantines {
+
+		isActive := obj.Input.IsActive()
+		assert := assert.New(t)
+		assert.False(isActive)
 	}
-
-	isActive := quarantine.IsActive()
-
-	assert := assert.New(t)
-	assert.False(isActive)
 }
