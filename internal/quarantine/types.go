@@ -15,21 +15,21 @@ type Quarantine struct {
 	Debug      Debug
 	Client     kubernetes.Interface
 	isActive   bool
-	conditions []metav1.Condition
-	logger     logr.Logger
+	Conditions []metav1.Condition
+	Logger     logr.Logger
 }
 
 // Node represents configuration for isolating a node
 type Node struct {
 	Name        string
 	Debug       Debug
-	isolate     bool
+	Isolate     bool
 	Daemonsets  []Daemonset
 	Deployments []Deployment
-	ioStreams   genericclioptions.IOStreams
+	IOStreams   genericclioptions.IOStreams
 	factory     util.Factory
 	Flags       *drain.Helper
-	logger      logr.Logger
+	Logger      logr.Logger
 }
 
 // Debug represents a configuration for a debug pod

@@ -57,7 +57,7 @@
             "mode": "test",
             "program": "${workspaceFolder}/internal/quarantine/",
             "env": {},
-            "args": [],
+            "args": ["-test.run", "TestStopQuarantine"],
             "showLog": true
     },
     ]

@@ -1,4 +1,4 @@
-package utils
+package tests
 
 // TestCase represents a struct with setup structs, expected return structs and errors of tested funcs
 type TestCase struct {

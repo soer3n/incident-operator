@@ -31,7 +31,7 @@ jobs:
       with:
         go-version: 1.16
     - name: test packages
-      run: go test -v ./internal/...
+      run: go test -coverpkg ./internal/... ./tests/unit/...
 
   test-k8s:
     strategy:
@@ -58,4 +58,4 @@ jobs:
         cluster_name: dev-cluster
         config: .github/kind.yaml
     - name: test controllers
-      run: ACK_GINKGO_DEPRECATIONS=1.16.4 go test -v ./controllers/...
+      run: ACK_GINKGO_DEPRECATIONS=1.16.4 go test -coverpkg ./controllers/... ./tests/e2e/...

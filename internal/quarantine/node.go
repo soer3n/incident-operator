@@ -29,14 +29,14 @@ func (n Node) prepare() error {
 			continue
 		}
 
-		if err := ds.isolatePod(n.Flags.Client, n.Name, n.isolate, n.logger.WithValues("daemonset", ds.Name)); err != nil {
+		if err := ds.isolatePod(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("daemonset", ds.Name)); err != nil {
 			return err
 		}
 	}
 
 	for _, d := range n.Deployments {
 
-		if err := d.isolatePod(n.Flags.Client, n.Name, n.isolate, n.logger.WithValues("deployment", d.Name)); err != nil {
+		if err := d.isolatePod(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("deployment", d.Name)); err != nil {
 			return err
 		}
 	}
@@ -45,7 +45,7 @@ func (n Node) prepare() error {
 		return err
 	}
 
-	if n.isolate {
+	if n.Isolate {
 		if err := n.addTaint(); err != nil {
 			return err
 		}
@@ -65,7 +65,7 @@ func (n *Node) update() error {
 		}
 
 		if !ok {
-			if err := ds.isolatePod(n.Flags.Client, n.Name, n.isolate, n.logger.WithValues("daemonset", ds.Name)); err != nil {
+			if err := ds.isolatePod(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("daemonset", ds.Name)); err != nil {
 				return err
 			}
 		}
@@ -80,7 +80,7 @@ func (n *Node) update() error {
 		}
 
 		if !ok {
-			if err := d.isolatePod(n.Flags.Client, n.Name, n.isolate, n.logger.WithValues("deployment", d.Name)); err != nil {
+			if err := d.isolatePod(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("deployment", d.Name)); err != nil {
 				return err
 			}
 		}
@@ -137,7 +137,7 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 func (n *Node) parseFlags(c kubernetes.Interface) {
 
 	if err != nil {
-		n.logger.Error(err, "failure on init node drain helper")
+		n.Logger.Error(err, "failure on init node drain helper")
 	}
 
 	n.Flags = &drain.Helper{
@@ -148,8 +148,8 @@ func (n *Node) parseFlags(c kubernetes.Interface) {
 		Force:               false,
 		Ctx:                 context.TODO(),
 		Client:              c,
-		ErrOut:              n.ioStreams.ErrOut,
-		Out:                 n.ioStreams.Out,
+		ErrOut:              n.IOStreams.ErrOut,
+		Out:                 n.IOStreams.Out,
 	}
 }
 
@@ -263,7 +263,7 @@ func (n Node) updateNodeAPIObject(nodeObj *corev1.Node) error {
 		return err
 	}
 
-	waitForResource(w, n.logger)
+	waitForResource(w, n.Logger)
 
 	return nil
 }

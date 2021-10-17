@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	opsv1alpha1 "github.com/soer3n/incident-operator/api/v1alpha1"
+	qcontrollers "github.com/soer3n/incident-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -61,7 +62,7 @@ var _ = BeforeSuite(func(done Done) {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -83,7 +84,7 @@ var _ = BeforeSuite(func(done Done) {
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred(), "failed to create manager")
 
-	err = (&QuarantineReconciler{
+	err = (&qcontrollers.QuarantineReconciler{
 		Client: mgr.GetClient(),
 		Log:    logf.Log,
 		Scheme: mgr.GetScheme(),
