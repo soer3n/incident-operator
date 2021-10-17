@@ -33,10 +33,38 @@ func GetQuarantineInitSpec() []tests.QuarantineInitTestCase {
 						{
 							Name:    "worker1",
 							Isolate: true,
+							Resources: []v1alpha1.Resource{
+								{
+									Type:      "daemonset",
+									Name:      "foo",
+									Namespace: "foo",
+									Keep:      false,
+								},
+								{
+									Type:      "deployment",
+									Name:      "baz",
+									Namespace: "baz",
+									Keep:      false,
+								},
+							},
 						},
 						{
 							Name:    "worker2",
 							Isolate: true,
+							Resources: []v1alpha1.Resource{
+								{
+									Type:      "daemonset",
+									Name:      "boo",
+									Namespace: "boo",
+									Keep:      false,
+								},
+								{
+									Type:      "deployment",
+									Name:      "bar",
+									Namespace: "bar",
+									Keep:      false,
+								},
+							},
 						},
 					},
 					Resources: []v1alpha1.Resource{
@@ -141,36 +169,6 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 				Conditions: []metav1.Condition{},
 			},
 		},
-	}
-}
-
-func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
-
-	fakeClientsetFoo := fake.NewSimpleClientset()
-	fakeClientsetFoo.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "nodes", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.Node{ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
-		}}, nil
-	})
-	fakeClientsetFoo.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("patch", "nodes", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.Node{ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
-		}}, nil
-	})
-
-	fakeClientsetBar := fake.NewSimpleClientset()
-	fakeClientsetBar.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "nodes", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.Node{ObjectMeta: metav1.ObjectMeta{
-			Name: "bar",
-		}}, nil
-	})
-	fakeClientsetBar.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("patch", "nodes", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.Node{ObjectMeta: metav1.ObjectMeta{
-			Name: "bar",
-		}}, nil
-	})
-
-	return []tests.QuarantineTestCase{
 		{
 			ReturnError: nil,
 			Input: &q.Quarantine{
@@ -182,7 +180,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 						Deployments: []q.Deployment{},
 						Logger:      ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client: fakeClientsetFoo,
+							Client: fakeClientset,
 						},
 						IOStreams: genericclioptions.IOStreams{
 							In:     os.Stdin,
@@ -190,17 +188,29 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 							ErrOut: os.Stdout,
 						},
 						Debug: q.Debug{
-							Enabled: false,
+							Enabled: true,
 						},
 					},
+				},
+				Logger: ctrl.Log.WithName("test"),
+				Debug: q.Debug{
+					Enabled: false,
+				},
+				Conditions: []metav1.Condition{},
+			},
+		},
+		{
+			ReturnError: nil,
+			Input: &q.Quarantine{
+				Nodes: []*q.Node{
 					{
-						Name:        "bar",
+						Name:        "foo",
 						Isolate:     false,
 						Daemonsets:  []q.Daemonset{},
 						Deployments: []q.Deployment{},
 						Logger:      ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client: fakeClientsetBar,
+							Client: fakeClientset,
 						},
 						IOStreams: genericclioptions.IOStreams{
 							In:     os.Stdin,
@@ -214,12 +224,135 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 				},
 				Logger: ctrl.Log.WithName("test"),
 				Debug: q.Debug{
-					Enabled: false,
+					Enabled: true,
 				},
 				Conditions: []metav1.Condition{},
 			},
 		},
 	}
+}
+
+func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
+
+	res := []tests.QuarantineTestCase{}
+
+	fakeClientsetFoo := fake.NewSimpleClientset()
+	configureClientset(fakeClientsetFoo, "foo")
+
+	fakeClientsetBar := fake.NewSimpleClientset()
+	configureClientset(fakeClientsetBar, "bar")
+
+	res = append(res, tests.QuarantineTestCase{
+		ReturnError: nil,
+		Input: &q.Quarantine{
+			Nodes: []*q.Node{
+				{
+					Name:    "foo",
+					Isolate: false,
+					Daemonsets: []q.Daemonset{
+						{
+							Name:      "foo",
+							Namespace: "foo",
+							Keep:      false,
+						},
+					},
+					Deployments: []q.Deployment{
+						{
+							Name:      "foo",
+							Namespace: "foo",
+							Keep:      true,
+						},
+					},
+					Logger: ctrl.Log.WithName("test"),
+					Flags: &drain.Helper{
+						Client: fakeClientsetFoo,
+					},
+					IOStreams: genericclioptions.IOStreams{
+						In:     os.Stdin,
+						Out:    os.Stdout,
+						ErrOut: os.Stdout,
+					},
+					Debug: q.Debug{
+						Enabled: false,
+					},
+				},
+				{
+					Name:        "bar",
+					Isolate:     false,
+					Daemonsets:  []q.Daemonset{},
+					Deployments: []q.Deployment{},
+					Logger:      ctrl.Log.WithName("test"),
+					Flags: &drain.Helper{
+						Client: fakeClientsetBar,
+					},
+					IOStreams: genericclioptions.IOStreams{
+						In:     os.Stdin,
+						Out:    os.Stdout,
+						ErrOut: os.Stdout,
+					},
+					Debug: q.Debug{
+						Enabled: true,
+					},
+				},
+			},
+			Logger: ctrl.Log.WithName("test"),
+			Debug: q.Debug{
+				Enabled: false,
+			},
+			Conditions: []metav1.Condition{},
+		},
+	})
+
+	res = append(res, tests.QuarantineTestCase{
+		ReturnError: nil,
+		Input: &q.Quarantine{
+			Nodes: []*q.Node{
+				{
+					Name:        "foo",
+					Isolate:     true,
+					Daemonsets:  []q.Daemonset{},
+					Deployments: []q.Deployment{},
+					Logger:      ctrl.Log.WithName("test"),
+					Flags: &drain.Helper{
+						Client: fakeClientsetFoo,
+					},
+					IOStreams: genericclioptions.IOStreams{
+						In:     os.Stdin,
+						Out:    os.Stdout,
+						ErrOut: os.Stdout,
+					},
+					Debug: q.Debug{
+						Enabled: false,
+					},
+				},
+				{
+					Name:        "bar",
+					Isolate:     true,
+					Daemonsets:  []q.Daemonset{},
+					Deployments: []q.Deployment{},
+					Logger:      ctrl.Log.WithName("test"),
+					Flags: &drain.Helper{
+						Client: fakeClientsetBar,
+					},
+					IOStreams: genericclioptions.IOStreams{
+						In:     os.Stdin,
+						Out:    os.Stdout,
+						ErrOut: os.Stdout,
+					},
+					Debug: q.Debug{
+						Enabled: true,
+					},
+				},
+			},
+			Logger: ctrl.Log.WithName("test"),
+			Debug: q.Debug{
+				Enabled: false,
+			},
+			Conditions: []metav1.Condition{},
+		},
+	})
+
+	return res
 }
 
 func GetQuarantineStopStructs() []tests.QuarantineTestCase {

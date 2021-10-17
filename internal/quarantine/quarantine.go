@@ -70,10 +70,8 @@ func New(s *v1alpha1.Quarantine, c kubernetes.Interface, f util.Factory, reqLogg
 			Logger:  reqLogger,
 		}
 
-		if err := temp.mergeResources(s.Spec.Resources); err != nil {
-			return q, err
-		}
-
+		temp.setNodesResources(n.Resources)
+		temp.mergeResources(s.Spec.Resources)
 		temp.parseFlags(c)
 		nodes = append(nodes, temp)
 	}

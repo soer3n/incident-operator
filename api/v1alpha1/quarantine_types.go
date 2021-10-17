@@ -37,9 +37,10 @@ type QuarantineSpec struct {
 
 // Node defines a configuration for node to isolate
 type Node struct {
-	Name    string `json:"name"`
-	Isolate bool   `json:"isolate,omitempty"`
-	Rescale bool   `json:"rescale,omitempty"`
+	Name      string     `json:"name"`
+	Isolate   bool       `json:"isolate,omitempty"`
+	Rescale   bool       `json:"rescale,omitempty"`
+	Resources []Resource `json:"resources,omitempty"`
 }
 
 // Resource defines a workload to isolate on a node

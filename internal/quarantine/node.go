@@ -89,7 +89,27 @@ func (n *Node) update() error {
 	return nil
 }
 
-func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
+func (n *Node) setNodesResources(rs []v1alpha1.Resource) {
+
+	for _, r := range rs {
+		switch t := r.Type; t {
+		case dsType:
+			n.Daemonsets = append(n.Daemonsets, Daemonset{
+				Name:      r.Name,
+				Namespace: r.Namespace,
+				Keep:      r.Keep,
+			})
+		case deploymentType:
+			n.Deployments = append(n.Deployments, Deployment{
+				Name:      r.Name,
+				Namespace: r.Namespace,
+				Keep:      r.Keep,
+			})
+		}
+	}
+}
+
+func (n *Node) mergeResources(rs []v1alpha1.Resource) {
 
 	for _, r := range rs {
 		switch t := r.Type; t {
@@ -130,15 +150,9 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) error {
 			})
 		}
 	}
-
-	return nil
 }
 
 func (n *Node) parseFlags(c kubernetes.Interface) {
-
-	if err != nil {
-		n.Logger.Error(err, "failure on init node drain helper")
-	}
 
 	n.Flags = &drain.Helper{
 		IgnoreAllDaemonSets: true,
