@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "test",
-            "program": "${workspaceFolder}/controllers/",
+            "program": "${workspaceFolder}/tests/e2e/",
             "env": {
                 "ACK_GINKGO_DEPRECATIONS": "1.16.4"
             }
@@ -55,9 +55,8 @@
             "type": "go",
             "request": "launch",
             "mode": "test",
-            "program": "${workspaceFolder}/internal/quarantine/",
+            "program": "${workspaceFolder}/tests/unit/",
             "env": {},
-            "args": ["-test.run", "TestStopQuarantine"],
             "showLog": true
     },
     ]
