@@ -24,8 +24,8 @@ func TestInitQuarantine(t *testing.T) {
 
 	for _, spec := range quarantineSpecs {
 
-		quarantine, err := quarantine.New(spec, fake.NewSimpleClientset(), factoryMock, logger)
-		assert.Nil(err)
+		quarantine, err := quarantine.New(spec.Input, fake.NewSimpleClientset(), factoryMock, logger)
+		assert.Equal(spec.ReturnError, err)
 		assert.NotNil(quarantine)
 	}
 }
@@ -38,7 +38,7 @@ func TestStartQuarantine(t *testing.T) {
 
 		err := obj.Input.Start()
 		assert := assert.New(t)
-		assert.Nil(err)
+		assert.Equal(obj.ReturnError, err)
 	}
 }
 
@@ -50,7 +50,7 @@ func TestPrepareQuarantine(t *testing.T) {
 
 		err := obj.Input.Prepare()
 		assert := assert.New(t)
-		assert.Nil(err)
+		assert.Equal(obj.ReturnError, err)
 	}
 }
 
@@ -62,7 +62,7 @@ func TestStopQuarantine(t *testing.T) {
 
 		err := obj.Input.Stop()
 		assert := assert.New(t)
-		assert.Nil(err)
+		assert.Equal(obj.ReturnError, err)
 	}
 }
 
@@ -74,7 +74,7 @@ func TestUpdateQuarantine(t *testing.T) {
 
 		err := obj.Input.Update()
 		assert := assert.New(t)
-		assert.Nil(err)
+		assert.Equal(obj.ReturnError, err)
 	}
 }
 

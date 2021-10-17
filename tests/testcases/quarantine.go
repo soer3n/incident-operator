@@ -19,22 +19,83 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func GetQuarantineInitSpec() []*v1alpha1.Quarantine {
-	return []*v1alpha1.Quarantine{
+func GetQuarantineInitSpec() []tests.QuarantineInitTestCase {
+	return []tests.QuarantineInitTestCase{
 		{
-			Spec: v1alpha1.QuarantineSpec{
-				Debug: v1alpha1.Debug{
-					Image:     "foo:bar",
-					Namespace: "test",
-				},
-				Nodes: []v1alpha1.Node{
-					{
-						Name:    "worker1",
-						Isolate: true,
+			ReturnError: nil,
+			Input: &v1alpha1.Quarantine{
+				Spec: v1alpha1.QuarantineSpec{
+					Debug: v1alpha1.Debug{
+						Image:     "foo:bar",
+						Namespace: "test",
 					},
-					{
-						Name:    "worker2",
-						Isolate: true,
+					Nodes: []v1alpha1.Node{
+						{
+							Name:    "worker1",
+							Isolate: true,
+						},
+						{
+							Name:    "worker2",
+							Isolate: true,
+						},
+					},
+					Resources: []v1alpha1.Resource{
+						{
+							Type:      "daemonset",
+							Name:      "foo",
+							Namespace: "foo",
+							Keep:      false,
+						},
+						{
+							Type:      "deployment",
+							Name:      "bar",
+							Namespace: "bar",
+							Keep:      false,
+						},
+					},
+				},
+			},
+		},
+		{
+			ReturnError: nil,
+			Input: &v1alpha1.Quarantine{
+				Status: v1alpha1.QuarantineStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:    "foo",
+							Reason:  "foo",
+							Message: "foo",
+						},
+					},
+				},
+				Spec: v1alpha1.QuarantineSpec{
+					Debug: v1alpha1.Debug{
+						Image:     "foo:bar",
+						Namespace: "test",
+					},
+					Nodes: []v1alpha1.Node{
+						{
+							Name:    "worker1",
+							Isolate: true,
+						},
+						{
+							Name:    "worker2",
+							Isolate: true,
+						},
+					},
+					Resources: []v1alpha1.Resource{
+						{
+							Type:      "daemonset",
+							Name:      "foo",
+							Namespace: "foo",
+							Keep:      false,
+						},
+						{
+							Type:      "deployment",
+							Name:      "bar",
+							Namespace: "bar",
+							Keep:      false,
+						},
 					},
 				},
 			},
@@ -51,6 +112,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 
 	return []tests.QuarantineTestCase{
 		{
+			ReturnError: nil,
 			Input: &q.Quarantine{
 				Nodes: []*q.Node{
 					{
@@ -110,6 +172,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 
 	return []tests.QuarantineTestCase{
 		{
+			ReturnError: nil,
 			Input: &q.Quarantine{
 				Nodes: []*q.Node{
 					{
@@ -187,6 +250,7 @@ func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 
 	return []tests.QuarantineTestCase{
 		{
+			ReturnError: nil,
 			Input: &q.Quarantine{
 				Nodes: []*q.Node{
 					{
@@ -223,6 +287,7 @@ func GetQuarantineUpdateStructs() []tests.QuarantineTestCase {
 
 	return []tests.QuarantineTestCase{
 		{
+			ReturnError: nil,
 			Input: &q.Quarantine{
 				Nodes: []*q.Node{
 					{
@@ -257,6 +322,7 @@ func GetQuarantineUpdateStructs() []tests.QuarantineTestCase {
 func GetQuarantineIsActiveStructs() []tests.QuarantineTestCase {
 	return []tests.QuarantineTestCase{
 		{
+			ReturnError: nil,
 			Input: &q.Quarantine{
 				Nodes: []*q.Node{
 					{

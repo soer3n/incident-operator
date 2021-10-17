@@ -52,7 +52,9 @@ func New(s *v1alpha1.Quarantine, c kubernetes.Interface, f util.Factory, reqLogg
 
 	for _, n := range s.Spec.Nodes {
 		temp := &Node{
-			Name: n.Name,
+			Name:        n.Name,
+			Daemonsets:  []Daemonset{},
+			Deployments: []Deployment{},
 			Debug: Debug{
 				Enabled:   s.Spec.Debug.Enabled,
 				Image:     debugImage,
