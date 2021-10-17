@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes/fake"
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
@@ -253,7 +252,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 						{
 							Name:      "foo",
 							Namespace: "foo",
-							Keep:      false,
+							Keep:      true,
 						},
 					},
 					Deployments: []q.Deployment{
@@ -297,7 +296,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 			},
 			Logger: ctrl.Log.WithName("test"),
 			Debug: q.Debug{
-				Enabled: false,
+				Enabled: true,
 			},
 			Conditions: []metav1.Condition{},
 		},
@@ -358,28 +357,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 
 	fakeClientset := fake.NewSimpleClientset()
-	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "nodes", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.Node{ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
-		}}, nil
-	})
-	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("update", "nodes", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.Node{ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
-		}}, nil
-	})
-	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependWatchReactor("nodes", func(action clienttesting.Action) (handled bool, ret watch.Interface, err error) {
-		fakeWatch := watch.NewRaceFreeFake()
-		fakeWatch.Action(watch.Added, &corev1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-			Spec: corev1.NodeSpec{
-				Unschedulable: true,
-			},
-		})
-		return true, fakeWatch, nil
-	})
+	configureClientset(fakeClientset, "foo")
 
 	return []tests.QuarantineTestCase{
 		{
@@ -387,11 +365,23 @@ func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 			Input: &q.Quarantine{
 				Nodes: []*q.Node{
 					{
-						Name:        "foo",
-						Isolate:     false,
-						Daemonsets:  []q.Daemonset{},
-						Deployments: []q.Deployment{},
-						Logger:      ctrl.Log.WithName("test"),
+						Name:    "foo",
+						Isolate: false,
+						Daemonsets: []q.Daemonset{
+							{
+								Name:      "foo",
+								Namespace: "foo",
+								Keep:      true,
+							},
+						},
+						Deployments: []q.Deployment{
+							{
+								Name:      "foo",
+								Namespace: "foo",
+								Keep:      true,
+							},
+						},
+						Logger: ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
 							Client: fakeClientset,
 						},
@@ -407,7 +397,7 @@ func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 				},
 				Logger: ctrl.Log.WithName("test"),
 				Debug: q.Debug{
-					Enabled: false,
+					Enabled: true,
 				},
 				Conditions: []metav1.Condition{},
 			},
@@ -416,7 +406,9 @@ func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 }
 
 func GetQuarantineUpdateStructs() []tests.QuarantineTestCase {
+
 	fakeClientset := fake.NewSimpleClientset()
+	configureClientset(fakeClientset, "foo")
 
 	return []tests.QuarantineTestCase{
 		{
@@ -424,11 +416,23 @@ func GetQuarantineUpdateStructs() []tests.QuarantineTestCase {
 			Input: &q.Quarantine{
 				Nodes: []*q.Node{
 					{
-						Name:        "foo",
-						Isolate:     false,
-						Daemonsets:  []q.Daemonset{},
-						Deployments: []q.Deployment{},
-						Logger:      ctrl.Log.WithName("test"),
+						Name:    "foo",
+						Isolate: false,
+						Daemonsets: []q.Daemonset{
+							{
+								Name:      "foo",
+								Namespace: "foo",
+								Keep:      true,
+							},
+						},
+						Deployments: []q.Deployment{
+							{
+								Name:      "foo",
+								Namespace: "foo",
+								Keep:      true,
+							},
+						},
+						Logger: ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
 							Client: fakeClientset,
 						},

@@ -55,6 +55,28 @@ func configureClientset(fakeClientset *fake.Clientset, nodeName string) {
 		})
 		return true, fakeWatch, nil
 	})
+	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "pods", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: corev1.PodSpec{
+				NodeName:   nodeName,
+				Containers: []corev1.Container{},
+			},
+		}, nil
+	})
+	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("delete", "pods", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
+		return true, &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+			Spec: corev1.PodSpec{
+				NodeName:   nodeName,
+				Containers: []corev1.Container{},
+			},
+		}, nil
+	})
 
 	fakeClientset.AppsV1().(*fakeappsv1.FakeAppsV1).PrependReactor("get", "daemonsets", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
 		return true, &appsv1.DaemonSet{

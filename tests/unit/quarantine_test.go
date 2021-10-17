@@ -68,7 +68,7 @@ func TestStopQuarantine(t *testing.T) {
 
 func TestUpdateQuarantine(t *testing.T) {
 
-	quarantines := testcases.GetQuarantineStopStructs()
+	quarantines := testcases.GetQuarantineUpdateStructs()
 
 	for _, obj := range quarantines {
 
