@@ -16,6 +16,7 @@ func prepareClientMock(clientset *mocks.Client) {
 
 	appsv1Mock := &mocks.AppsV1{}
 	corev1Mock := &mocks.CoreV1{}
+	discoveryMock := &mocks.Discovery{}
 
 	deployv1Mock := getDeploymentMock()
 	daemonv1Mock := getDaemonsetMock()
@@ -30,8 +31,30 @@ func prepareClientMock(clientset *mocks.Client) {
 	appsv1Mock.On("Deployments", "").Return(deployv1Mock)
 	appsv1Mock.On("Deployments", "foo").Return(deployv1Mock)
 
+	discoveryMock.On("ServerGroups").Return(&metav1.APIGroupList{
+		Groups: []metav1.APIGroup{
+			{
+				Versions: []metav1.GroupVersionForDiscovery{
+					{
+						GroupVersion: "deployments/v1",
+						Version:      "v1",
+					},
+					{
+						GroupVersion: "pods/v1",
+						Version:      "v1",
+					},
+					{
+						GroupVersion: "nodes/v1",
+						Version:      "v1",
+					},
+				},
+			},
+		},
+	}, nil)
+
 	clientset.On("CoreV1").Return(corev1Mock)
 	clientset.On("AppsV1").Return(appsv1Mock)
+	clientset.On("Discovery").Return(discoveryMock)
 }
 
 func getNodeMock() *mocks.NodeV1 {
@@ -149,8 +172,10 @@ func getPodMock() *mocks.PodV1 {
 		},
 	}
 
+	p.On("Get", context.TODO(), "foo", metav1.GetOptions{}).Return(pod, nil)
 	p.On("Get", context.TODO(), "quarantine-debug", metav1.GetOptions{}).Return(pod, nil)
 	p.On("Get", context.TODO(), "quarantine-debug-foo", metav1.GetOptions{}).Return(pod, nil)
+
 	p.On("List", context.Background(), metav1.ListOptions{
 		LabelSelector: "ops.soer3n.info/key=value",
 	}).Return(podList, nil)
@@ -166,10 +191,16 @@ func getPodMock() *mocks.PodV1 {
 	p.On("List", context.Background(), metav1.ListOptions{
 		LabelSelector: "ops.soer3n.info/key=value,kubernetes.io/hostname=foo",
 	}).Return(podList, nil)
+
 	p.On("Update", context.Background(), isolatedPod, metav1.UpdateOptions{}).Return(isolatedPod, nil)
+
+	gracePeriod := int64(0)
 
 	p.On("Delete", context.TODO(), "quarantine-debug-foo", metav1.DeleteOptions{}).Return(nil)
 	p.On("Delete", context.TODO(), "foo", metav1.DeleteOptions{}).Return(nil)
+	p.On("Delete", context.TODO(), "foo", metav1.DeleteOptions{
+		GracePeriodSeconds: &gracePeriod,
+	}).Return(nil)
 
 	watchChan := watch.NewFake()
 	timeout := int64(20)

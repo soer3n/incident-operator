@@ -10,13 +10,6 @@ import (
 	appsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 )
 
-// AppsV1 represents mock func for similar runtime client func
-func (client *Client) AppsV1() appsv1.AppsV1Interface {
-	args := client.Called()
-	v := args.Get(0)
-	return v.(appsv1.AppsV1Interface)
-}
-
 // Deployments represents mock func for similar runtime client func
 func (a *AppsV1) Deployments(namespace string) appsv1.DeploymentInterface {
 	args := a.Called(namespace)

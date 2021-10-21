@@ -258,7 +258,6 @@ func (n Node) updateNodeAPIObject(nodeObj *corev1.Node) error {
 		LabelSelector:  "kubernetes.io/hostname=" + n.Name,
 		TimeoutSeconds: &timeout,
 	}
-
 	w, err := n.Flags.Client.CoreV1().Nodes().Watch(context.TODO(), listOpts)
 
 	if err != nil {

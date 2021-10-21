@@ -2,6 +2,7 @@ package typed
 
 import (
 	"github.com/stretchr/testify/mock"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	appsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -11,6 +12,12 @@ import (
 type Client struct {
 	mock.Mock
 	kubernetes.Interface
+}
+
+// CoreV1 represents mock struct for k8s runtime client core v1 api resources
+type Discovery struct {
+	mock.Mock
+	discovery.DiscoveryInterface
 }
 
 // CoreV1 represents mock struct for k8s runtime client core v1 api resources

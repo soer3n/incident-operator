@@ -131,6 +131,12 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 	fakeClientset := &mocks.Client{}
 	prepareClientMock(fakeClientset)
 
+	fakeClientsetBar := &mocks.Client{}
+	prepareClientMock(fakeClientsetBar)
+
+	fakeClientsetBaz := &mocks.Client{}
+	prepareClientMock(fakeClientsetBaz)
+
 	return []tests.QuarantineTestCase{
 		{
 			ReturnError: nil,
@@ -143,7 +149,13 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 						Deployments: []q.Deployment{},
 						Logger:      ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client: fakeClientset,
+							Client:              fakeClientset,
+							IgnoreAllDaemonSets: true,
+							DisableEviction:     false,
+							DeleteEmptyDirData:  true,
+							Force:               true,
+							ErrOut:              os.Stdout,
+							Out:                 os.Stdout,
 						},
 						IOStreams: genericclioptions.IOStreams{
 							In:     os.Stdin,
@@ -173,7 +185,13 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 						Deployments: []q.Deployment{},
 						Logger:      ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client: fakeClientset,
+							Client:              fakeClientsetBar,
+							IgnoreAllDaemonSets: true,
+							DisableEviction:     false,
+							DeleteEmptyDirData:  true,
+							Force:               true,
+							ErrOut:              os.Stdout,
+							Out:                 os.Stdout,
 						},
 						IOStreams: genericclioptions.IOStreams{
 							In:     os.Stdin,
@@ -203,7 +221,13 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 						Deployments: []q.Deployment{},
 						Logger:      ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client: fakeClientset,
+							Client:              fakeClientsetBaz,
+							IgnoreAllDaemonSets: true,
+							DisableEviction:     false,
+							DeleteEmptyDirData:  true,
+							Force:               true,
+							ErrOut:              os.Stdout,
+							Out:                 os.Stdout,
 						},
 						IOStreams: genericclioptions.IOStreams{
 							In:     os.Stdin,
@@ -254,7 +278,11 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 					},
 					Logger: ctrl.Log.WithName("test"),
 					Flags: &drain.Helper{
-						Client: clientsetA,
+						Client:              clientsetA,
+						IgnoreAllDaemonSets: true,
+						DisableEviction:     false,
+						DeleteEmptyDirData:  true,
+						Force:               false,
 					},
 					IOStreams: genericclioptions.IOStreams{
 						In:     os.Stdin,
@@ -272,7 +300,11 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 					Deployments: []q.Deployment{},
 					Logger:      ctrl.Log.WithName("test"),
 					Flags: &drain.Helper{
-						Client: clientsetA,
+						Client:              clientsetA,
+						IgnoreAllDaemonSets: true,
+						DisableEviction:     false,
+						DeleteEmptyDirData:  true,
+						Force:               false,
 					},
 					IOStreams: genericclioptions.IOStreams{
 						In:     os.Stdin,
@@ -305,7 +337,11 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 					Deployments: []q.Deployment{},
 					Logger:      ctrl.Log.WithName("test"),
 					Flags: &drain.Helper{
-						Client: clientsetB,
+						Client:              clientsetB,
+						IgnoreAllDaemonSets: true,
+						DisableEviction:     false,
+						DeleteEmptyDirData:  true,
+						Force:               false,
 					},
 					IOStreams: genericclioptions.IOStreams{
 						In:     os.Stdin,
@@ -323,7 +359,11 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 					Deployments: []q.Deployment{},
 					Logger:      ctrl.Log.WithName("test"),
 					Flags: &drain.Helper{
-						Client: clientsetB,
+						Client:              clientsetB,
+						IgnoreAllDaemonSets: true,
+						DisableEviction:     false,
+						DeleteEmptyDirData:  true,
+						Force:               false,
 					},
 					IOStreams: genericclioptions.IOStreams{
 						In:     os.Stdin,
@@ -375,7 +415,11 @@ func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 						},
 						Logger: ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client: fakeClientset,
+							Client:              fakeClientset,
+							IgnoreAllDaemonSets: true,
+							DisableEviction:     false,
+							DeleteEmptyDirData:  true,
+							Force:               false,
 						},
 						IOStreams: genericclioptions.IOStreams{
 							In:     os.Stdin,
@@ -426,7 +470,11 @@ func GetQuarantineUpdateStructs() []tests.QuarantineTestCase {
 						},
 						Logger: ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client: fakeClientset,
+							Client:              fakeClientset,
+							IgnoreAllDaemonSets: true,
+							DisableEviction:     false,
+							DeleteEmptyDirData:  true,
+							Force:               false,
 						},
 						IOStreams: genericclioptions.IOStreams{
 							In:     os.Stdin,
