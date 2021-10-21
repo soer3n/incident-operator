@@ -6,14 +6,10 @@ import (
 	"github.com/soer3n/incident-operator/api/v1alpha1"
 	q "github.com/soer3n/incident-operator/internal/quarantine"
 	"github.com/soer3n/incident-operator/tests"
+	mocks "github.com/soer3n/incident-operator/tests/mocks/typed"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/kubernetes/fake"
-	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-	clienttesting "k8s.io/client-go/testing"
 	"k8s.io/kubectl/pkg/drain"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -132,10 +128,8 @@ func GetQuarantineInitSpec() []tests.QuarantineInitTestCase {
 
 func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 
-	fakeClientset := fake.NewSimpleClientset()
-	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("list", "pods", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.PodList{Items: []corev1.Pod{}}, nil
-	})
+	fakeClientset := &mocks.Client{}
+	prepareClientMock(fakeClientset)
 
 	return []tests.QuarantineTestCase{
 		{
@@ -234,12 +228,8 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 
 	res := []tests.QuarantineTestCase{}
-
-	fakeClientsetFoo := fake.NewSimpleClientset()
-	configureClientset(fakeClientsetFoo, "foo")
-
-	fakeClientsetBar := fake.NewSimpleClientset()
-	configureClientset(fakeClientsetBar, "bar")
+	clientsetA := &mocks.Client{}
+	prepareClientMock(clientsetA)
 
 	res = append(res, tests.QuarantineTestCase{
 		ReturnError: nil,
@@ -264,7 +254,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 					},
 					Logger: ctrl.Log.WithName("test"),
 					Flags: &drain.Helper{
-						Client: fakeClientsetFoo,
+						Client: clientsetA,
 					},
 					IOStreams: genericclioptions.IOStreams{
 						In:     os.Stdin,
@@ -282,7 +272,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 					Deployments: []q.Deployment{},
 					Logger:      ctrl.Log.WithName("test"),
 					Flags: &drain.Helper{
-						Client: fakeClientsetBar,
+						Client: clientsetA,
 					},
 					IOStreams: genericclioptions.IOStreams{
 						In:     os.Stdin,
@@ -302,6 +292,8 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 		},
 	})
 
+	clientsetB := &mocks.Client{}
+	prepareClientMock(clientsetB)
 	res = append(res, tests.QuarantineTestCase{
 		ReturnError: nil,
 		Input: &q.Quarantine{
@@ -313,7 +305,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 					Deployments: []q.Deployment{},
 					Logger:      ctrl.Log.WithName("test"),
 					Flags: &drain.Helper{
-						Client: fakeClientsetFoo,
+						Client: clientsetB,
 					},
 					IOStreams: genericclioptions.IOStreams{
 						In:     os.Stdin,
@@ -331,7 +323,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 					Deployments: []q.Deployment{},
 					Logger:      ctrl.Log.WithName("test"),
 					Flags: &drain.Helper{
-						Client: fakeClientsetBar,
+						Client: clientsetB,
 					},
 					IOStreams: genericclioptions.IOStreams{
 						In:     os.Stdin,
@@ -356,8 +348,8 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 
 func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 
-	fakeClientset := fake.NewSimpleClientset()
-	configureClientset(fakeClientset, "foo")
+	fakeClientset := &mocks.Client{}
+	prepareClientMock(fakeClientset)
 
 	return []tests.QuarantineTestCase{
 		{
@@ -407,8 +399,8 @@ func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 
 func GetQuarantineUpdateStructs() []tests.QuarantineTestCase {
 
-	fakeClientset := fake.NewSimpleClientset()
-	configureClientset(fakeClientset, "foo")
+	fakeClientset := &mocks.Client{}
+	prepareClientMock(fakeClientset)
 
 	return []tests.QuarantineTestCase{
 		{

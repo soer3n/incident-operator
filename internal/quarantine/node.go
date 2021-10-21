@@ -125,12 +125,6 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) {
 				})
 
 			}
-
-			n.Daemonsets = append(n.Daemonsets, Daemonset{
-				Name:      r.Name,
-				Namespace: r.Namespace,
-				Keep:      r.Keep,
-			})
 		case deploymentType:
 			for _, v := range n.Deployments {
 				if v.Name == r.Name && v.Namespace == r.Namespace {
@@ -142,12 +136,6 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) {
 					Keep:      v.Keep,
 				})
 			}
-
-			n.Deployments = append(n.Deployments, Deployment{
-				Name:      r.Name,
-				Namespace: r.Namespace,
-				Keep:      r.Keep,
-			})
 		}
 	}
 }
@@ -246,8 +234,8 @@ func (n Node) getNodeAPIObject() *corev1.Node {
 	var nodeObj *corev1.Node
 
 	opts := metav1.GetOptions{}
-
-	if nodeObj, err = n.Flags.Client.CoreV1().Nodes().Get(context.Background(), n.Name, opts); err != nil {
+	core := n.Flags.Client.CoreV1()
+	if nodeObj, err = core.Nodes().Get(context.Background(), n.Name, opts); err != nil {
 		println(err.Error())
 	}
 

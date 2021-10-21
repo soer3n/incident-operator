@@ -1,120 +1,232 @@
 package testcases
 
 import (
+	"context"
+
+	mocks "github.com/soer3n/incident-operator/tests/mocks/typed"
+	"github.com/stretchr/testify/mock"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/kubernetes/fake"
-	fakeappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1/fake"
-	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-	clienttesting "k8s.io/client-go/testing"
 )
 
-func configureClientset(fakeClientset *fake.Clientset, nodeName string) {
+func prepareClientMock(clientset *mocks.Client) {
 
-	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "nodes", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.Node{ObjectMeta: metav1.ObjectMeta{
-			Name: nodeName,
-		}}, nil
-	})
-	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("patch", "nodes", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.Node{ObjectMeta: metav1.ObjectMeta{
-			Name: nodeName,
-		}}, nil
-	})
-	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("update", "nodes", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.Node{ObjectMeta: metav1.ObjectMeta{
-			Name: nodeName,
-		}}, nil
-	})
-	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependWatchReactor("nodes", func(action clienttesting.Action) (handled bool, ret watch.Interface, err error) {
-		fakeWatch := watch.NewRaceFreeFake()
-		fakeWatch.Action(watch.Added, &corev1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-			Spec: corev1.NodeSpec{
-				Unschedulable: true,
-			},
-		})
-		return true, fakeWatch, nil
-	})
+	appsv1Mock := &mocks.AppsV1{}
+	corev1Mock := &mocks.CoreV1{}
 
-	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependWatchReactor("pods", func(action clienttesting.Action) (handled bool, ret watch.Interface, err error) {
-		fakeWatch := watch.NewRaceFreeFake()
-		fakeWatch.Action(watch.Added, &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-			Spec: corev1.PodSpec{
-				NodeName:   nodeName,
-				Containers: []corev1.Container{},
-			},
-		})
-		return true, fakeWatch, nil
-	})
-	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "pods", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-			Spec: corev1.PodSpec{
-				NodeName:   nodeName,
-				Containers: []corev1.Container{},
-			},
-		}, nil
-	})
-	fakeClientset.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("delete", "pods", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-			Spec: corev1.PodSpec{
-				NodeName:   nodeName,
-				Containers: []corev1.Container{},
-			},
-		}, nil
+	deployv1Mock := getDeploymentMock()
+	daemonv1Mock := getDaemonsetMock()
+	nodev1Mock := getNodeMock()
+	podv1Mock := getPodMock()
+
+	corev1Mock.On("Nodes").Return(nodev1Mock)
+	corev1Mock.On("Pods", "").Return(podv1Mock)
+	corev1Mock.On("Pods", "foo").Return(podv1Mock)
+
+	appsv1Mock.On("DaemonSets", "foo").Return(daemonv1Mock)
+	appsv1Mock.On("Deployments", "").Return(deployv1Mock)
+	appsv1Mock.On("Deployments", "foo").Return(deployv1Mock)
+
+	clientset.On("CoreV1").Return(corev1Mock)
+	clientset.On("AppsV1").Return(appsv1Mock)
+}
+
+func getNodeMock() *mocks.NodeV1 {
+	n := &mocks.NodeV1{}
+	nodeA := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+		},
+		Spec: corev1.NodeSpec{
+			Unschedulable: true,
+		},
+	}
+
+	nodeB := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "bar",
+		},
+		Spec: corev1.NodeSpec{
+			Unschedulable: false,
+		},
+	}
+
+	patch := []byte{0x7b, 0x22, 0x73, 0x70, 0x65, 0x63, 0x22, 0x3a, 0x7b, 0x22, 0x75, 0x6e, 0x73, 0x63, 0x68, 0x65, 0x64, 0x75, 0x6c, 0x61, 0x62, 0x6c, 0x65, 0x22, 0x3a, 0x74, 0x72, 0x75, 0x65, 0x7d, 0x7d}
+
+	var list []string
+
+	n.On("Get", context.Background(), "foo", metav1.GetOptions{}).Return(nodeA, nil)
+	n.On("Get", context.Background(), "bar", metav1.GetOptions{}).Return(nodeB, nil)
+
+	watchChan := watch.NewFake()
+	timeout := int64(20)
+
+	n.On("Watch", context.TODO(), metav1.ListOptions{
+		LabelSelector:  "kubernetes.io/hostname=bar",
+		Watch:          true,
+		TimeoutSeconds: &timeout,
+	}).Return(
+		watchChan, nil,
+	).Run(func(args mock.Arguments) {
+		go func() {
+			watchChan.Add(nodeB)
+		}()
 	})
 
-	fakeClientset.AppsV1().(*fakeappsv1.FakeAppsV1).PrependReactor("get", "daemonsets", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &appsv1.DaemonSet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
+	n.On("Watch", context.TODO(), metav1.ListOptions{
+		LabelSelector:  "kubernetes.io/hostname=foo",
+		Watch:          true,
+		TimeoutSeconds: &timeout,
+	}).Return(
+		watchChan, nil,
+	).Run(func(args mock.Arguments) {
+		go func() {
+			watchChan.Add(nodeB)
+		}()
+	})
+
+	n.On("Update", context.Background(), nodeA, metav1.UpdateOptions{}).Return(nodeA, nil)
+	n.On("Update", context.Background(), nodeB, metav1.UpdateOptions{}).Return(nodeB, nil)
+
+	n.On("Patch", nil, "foo", types.StrategicMergePatchType, patch, metav1.PatchOptions{}, list).Return(nodeA, nil)
+	n.On("Patch", nil, "bar", types.StrategicMergePatchType, patch, metav1.PatchOptions{}, list).Return(nodeA, nil)
+
+	patchBar := []byte{0x7b, 0x22, 0x73, 0x70, 0x65, 0x63, 0x22, 0x3a, 0x7b, 0x22, 0x75, 0x6e, 0x73, 0x63, 0x68, 0x65, 0x64, 0x75, 0x6c, 0x61, 0x62, 0x6c, 0x65, 0x22, 0x3a, 0x6e, 0x75, 0x6c, 0x6c, 0x7d, 0x7d}
+	n.On("Patch", nil, "foo", types.StrategicMergePatchType, patchBar, metav1.PatchOptions{}, list).Return(nodeA, nil)
+
+	return n
+}
+
+func getPodMock() *mocks.PodV1 {
+	p := &mocks.PodV1{}
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "quarantine-debug",
+			Namespace: "foo",
+		},
+		Spec: corev1.PodSpec{
+			NodeName:   "foo",
+			Containers: []corev1.Container{},
+		},
+	}
+
+	isolatedPod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "foo",
+			Namespace: "",
+			Labels: map[string]string{
+				"ops.soer3n.info/quarantine": "true",
 			},
-			Spec: appsv1.DaemonSetSpec{
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"key": "value",
-					},
+		},
+		Spec: corev1.PodSpec{
+			NodeName:   "foo",
+			Containers: []corev1.Container{},
+			Tolerations: []corev1.Toleration{
+				{
+					Key:      "quarantine",
+					Operator: "",
+					Value:    "true",
+					Effect:   "NoExecute",
 				},
 			},
-		}, nil
-	})
-	fakeClientset.AppsV1().(*fakeappsv1.FakeAppsV1).PrependReactor("update", "daemonsets", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &appsv1.DaemonSet{ObjectMeta: metav1.ObjectMeta{
-			Name: "foo",
-		}}, nil
-	})
+		},
+	}
 
-	fakeClientset.AppsV1().(*fakeappsv1.FakeAppsV1).PrependReactor("get", "deployments", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
-			Spec: appsv1.DeploymentSpec{
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"key": "value",
-					},
+	podList := &corev1.PodList{
+		Items: []corev1.Pod{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "foo",
+				},
+				Spec: corev1.PodSpec{
+					NodeName:   "foo",
+					Containers: []corev1.Container{},
 				},
 			},
-		}, nil
+		},
+	}
+
+	p.On("Get", context.TODO(), "quarantine-debug", metav1.GetOptions{}).Return(pod, nil)
+	p.On("Get", context.TODO(), "quarantine-debug-foo", metav1.GetOptions{}).Return(pod, nil)
+	p.On("List", context.Background(), metav1.ListOptions{
+		LabelSelector: "ops.soer3n.info/key=value",
+	}).Return(podList, nil)
+	p.On("List", context.Background(), metav1.ListOptions{
+		LabelSelector: "ops.soer3n.info/quarantine=true",
+	}).Return(podList, nil)
+	p.On("List", context.Background(), metav1.ListOptions{
+		LabelSelector: "key=value",
+	}).Return(podList, nil)
+	p.On("List", context.Background(), metav1.ListOptions{
+		FieldSelector: "spec.nodeName=foo",
+	}).Return(podList, nil)
+	p.On("List", context.Background(), metav1.ListOptions{
+		LabelSelector: "ops.soer3n.info/key=value,kubernetes.io/hostname=foo",
+	}).Return(podList, nil)
+	p.On("Update", context.Background(), isolatedPod, metav1.UpdateOptions{}).Return(isolatedPod, nil)
+
+	p.On("Delete", context.TODO(), "quarantine-debug-foo", metav1.DeleteOptions{}).Return(nil)
+	p.On("Delete", context.TODO(), "foo", metav1.DeleteOptions{}).Return(nil)
+
+	watchChan := watch.NewFake()
+	timeout := int64(20)
+
+	p.On("Watch", context.TODO(), metav1.ListOptions{
+		LabelSelector:  "kubernetes.io/hostname=bar",
+		Watch:          true,
+		TimeoutSeconds: &timeout,
+	}).Return(
+		watchChan, nil,
+	).Run(func(args mock.Arguments) {
+		go func() {
+			watchChan.Add(pod)
+		}()
 	})
-	fakeClientset.AppsV1().(*fakeappsv1.FakeAppsV1).PrependReactor("update", "deployments", func(action clienttesting.Action) (handled bool, ret runtime.Object, err error) {
-		return true, &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+
+	return p
+}
+
+func getDaemonsetMock() *mocks.DaemonsetV1 {
+	ds := &mocks.DaemonsetV1{}
+	daemonset := &appsv1.DaemonSet{
+		ObjectMeta: metav1.ObjectMeta{
 			Name: "foo",
-		}}, nil
-	})
+		},
+		Spec: appsv1.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"key": "value",
+				},
+			},
+		},
+	}
+
+	ds.On("Get", context.TODO(), "foo", metav1.GetOptions{}).Return(daemonset, nil)
+	ds.On("Update", context.Background(), daemonset, metav1.UpdateOptions{}).Return(daemonset, nil)
+
+	return ds
+}
+
+func getDeploymentMock() *mocks.DeploymentV1 {
+	d := &mocks.DeploymentV1{}
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "foo",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"key": "value",
+				},
+			},
+		},
+	}
+
+	d.On("Get", context.TODO(), "foo", metav1.GetOptions{}).Return(deployment, nil)
+	d.On("Update", context.Background(), deployment, metav1.UpdateOptions{}).Return(deployment, nil)
+
+	return d
 }

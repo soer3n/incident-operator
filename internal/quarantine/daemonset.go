@@ -105,15 +105,15 @@ func (ds Daemonset) isAlreadyManaged(c kubernetes.Interface, node, namespace str
 	}
 
 	labels, _ := ds.getLabelSelectorAsString(obj.Spec.Selector)
-	labels = labels + ",kubernetes.io/hostname=" + node
+	labels = labels + ""
 
 	listOpts := metav1.ListOptions{
 		LabelSelector: labels,
 	}
 
 	var podList *corev1.PodList
-
-	if podList, err = c.CoreV1().Pods(namespace).List(context.TODO(), listOpts); err != nil {
+	core := c.CoreV1()
+	if podList, err = core.Pods(namespace).List(context.TODO(), listOpts); err != nil {
 		return false, err
 	}
 
@@ -121,7 +121,13 @@ func (ds Daemonset) isAlreadyManaged(c kubernetes.Interface, node, namespace str
 		return false, nil
 	}
 
-	return true, nil
+	for _, pods := range podList.Items {
+		if pods.Spec.NodeName == node {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func (ds Daemonset) getLabelSelectorAsString(podMatchLabels *metav1.LabelSelector) (string, error) {
