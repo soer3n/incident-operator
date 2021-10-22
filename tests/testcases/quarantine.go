@@ -143,7 +143,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 			Input: &q.Quarantine{
 				Nodes: []*q.Node{
 					{
-						Name:        "foo",
+						Name:        "bar",
 						Isolate:     false,
 						Daemonsets:  []q.Daemonset{},
 						Deployments: []q.Deployment{},
@@ -154,6 +154,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 							DisableEviction:     false,
 							DeleteEmptyDirData:  true,
 							Force:               true,
+							PodSelector:         "quarantine-start",
 							ErrOut:              os.Stdout,
 							Out:                 os.Stdout,
 						},
@@ -179,7 +180,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 			Input: &q.Quarantine{
 				Nodes: []*q.Node{
 					{
-						Name:        "foo",
+						Name:        "bar",
 						Isolate:     false,
 						Daemonsets:  []q.Daemonset{},
 						Deployments: []q.Deployment{},
@@ -190,6 +191,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 							DisableEviction:     false,
 							DeleteEmptyDirData:  true,
 							Force:               true,
+							PodSelector:         "quarantine-start",
 							ErrOut:              os.Stdout,
 							Out:                 os.Stdout,
 						},
@@ -215,7 +217,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 			Input: &q.Quarantine{
 				Nodes: []*q.Node{
 					{
-						Name:        "foo",
+						Name:        "bar",
 						Isolate:     false,
 						Daemonsets:  []q.Daemonset{},
 						Deployments: []q.Deployment{},
@@ -226,6 +228,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 							DisableEviction:     false,
 							DeleteEmptyDirData:  true,
 							Force:               true,
+							PodSelector:         "quarantine-start",
 							ErrOut:              os.Stdout,
 							Out:                 os.Stdout,
 						},

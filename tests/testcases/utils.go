@@ -2,6 +2,7 @@ package testcases
 
 import (
 	"context"
+	"errors"
 
 	mocks "github.com/soer3n/incident-operator/tests/mocks/typed"
 	"github.com/stretchr/testify/mock"
@@ -176,6 +177,9 @@ func getPodMock() *mocks.PodV1 {
 	p.On("Get", context.TODO(), "quarantine-debug", metav1.GetOptions{}).Return(pod, nil)
 	p.On("Get", context.TODO(), "quarantine-debug-foo", metav1.GetOptions{}).Return(pod, nil)
 
+	p.On("Get", context.TODO(), "bar", metav1.GetOptions{}).Return(pod, errors.New("error on get pod bar"))
+	p.On("Get", context.TODO(), "quarantine-debug-bar", metav1.GetOptions{}).Return(pod, errors.New("error on get pod quarantine-debug-bar"))
+
 	p.On("List", context.Background(), metav1.ListOptions{
 		LabelSelector: "ops.soer3n.info/key=value",
 	}).Return(podList, nil)
@@ -190,6 +194,10 @@ func getPodMock() *mocks.PodV1 {
 	}).Return(podList, nil)
 	p.On("List", context.Background(), metav1.ListOptions{
 		LabelSelector: "ops.soer3n.info/key=value,kubernetes.io/hostname=foo",
+	}).Return(podList, nil)
+
+	p.On("List", context.Background(), metav1.ListOptions{
+		FieldSelector: "spec.nodeName=bar",
 	}).Return(podList, nil)
 
 	p.On("Update", context.Background(), isolatedPod, metav1.UpdateOptions{}).Return(isolatedPod, nil)
