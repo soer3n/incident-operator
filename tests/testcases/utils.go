@@ -2,7 +2,9 @@ package testcases
 
 import (
 	"context"
-	"errors"
+
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	mocks "github.com/soer3n/incident-operator/tests/mocks/typed"
 	"github.com/stretchr/testify/mock"
@@ -173,12 +175,33 @@ func getPodMock() *mocks.PodV1 {
 		},
 	}
 
+	podListStart := &corev1.PodList{
+		Items: []corev1.Pod{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bar",
+				},
+				Spec: corev1.PodSpec{
+					NodeName:   "bar",
+					Containers: []corev1.Container{},
+				},
+			},
+		},
+	}
+
 	p.On("Get", context.TODO(), "foo", metav1.GetOptions{}).Return(pod, nil)
 	p.On("Get", context.TODO(), "quarantine-debug", metav1.GetOptions{}).Return(pod, nil)
 	p.On("Get", context.TODO(), "quarantine-debug-foo", metav1.GetOptions{}).Return(pod, nil)
 
-	p.On("Get", context.TODO(), "bar", metav1.GetOptions{}).Return(pod, errors.New("error on get pod bar"))
-	p.On("Get", context.TODO(), "quarantine-debug-bar", metav1.GetOptions{}).Return(pod, errors.New("error on get pod quarantine-debug-bar"))
+	p.On("Get", context.TODO(), "bar", metav1.GetOptions{}).Return(pod, nil).Once()
+	p.On("Get", context.TODO(), "bar", metav1.GetOptions{}).Return(pod, errors.NewNotFound(schema.GroupResource{
+		Group:    "",
+		Resource: "pod",
+	}, "bar"))
+	p.On("Get", context.TODO(), "quarantine-debug-bar", metav1.GetOptions{}).Return(pod, errors.NewNotFound(schema.GroupResource{
+		Group:    "",
+		Resource: "pod",
+	}, "quarantine-debug-bar"))
 
 	p.On("List", context.Background(), metav1.ListOptions{
 		LabelSelector: "ops.soer3n.info/key=value",
@@ -197,8 +220,9 @@ func getPodMock() *mocks.PodV1 {
 	}).Return(podList, nil)
 
 	p.On("List", context.Background(), metav1.ListOptions{
+		LabelSelector: "quarantine-start",
 		FieldSelector: "spec.nodeName=bar",
-	}).Return(podList, nil)
+	}).Return(podListStart, nil)
 
 	p.On("Update", context.Background(), isolatedPod, metav1.UpdateOptions{}).Return(isolatedPod, nil)
 
@@ -207,6 +231,9 @@ func getPodMock() *mocks.PodV1 {
 	p.On("Delete", context.TODO(), "quarantine-debug-foo", metav1.DeleteOptions{}).Return(nil)
 	p.On("Delete", context.TODO(), "foo", metav1.DeleteOptions{}).Return(nil)
 	p.On("Delete", context.TODO(), "foo", metav1.DeleteOptions{
+		GracePeriodSeconds: &gracePeriod,
+	}).Return(nil)
+	p.On("Delete", context.TODO(), "bar", metav1.DeleteOptions{
 		GracePeriodSeconds: &gracePeriod,
 	}).Return(nil)
 
