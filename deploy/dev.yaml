@@ -7,7 +7,7 @@ metadata:
 spec:
   ports:
   - name: webhook
-    port: 9443
+    port: 443
     targetPort: 9443
   selector:
     app: incident-operator
@@ -76,3 +76,34 @@ rules:
   - 'get'
   - 'list'
   - 'watch'
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: quarantine-validating-webhook
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURQekNDQWllZ0F3SUJBZ0lVTG8zQlRjN3hRdFdlK1JrTzk1d1NNUEszWlNFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0x6RXRNQ3NHQTFVRUF3d2tRV1J0YVhOemFXOXVJRU52Ym5SeWIyeHNaWElnVjJWaWFHOXZheUJFWlcxdgpJRU5CTUI0WERUSXhNVEF5TkRJd01UZzBPVm9YRFRJeE1URXlNekl3TVRnME9Wb3dMekV0TUNzR0ExVUVBd3drClFXUnRhWE56YVc5dUlFTnZiblJ5YjJ4c1pYSWdWMlZpYUc5dmF5QkVaVzF2SUVOQk1JSUJJakFOQmdrcWhraUcKOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQTM4ajNWQ0FvOUpsK20zWnNxZ040c2ZsUi9OZk9TNFBGa1FzNApWaEVJbkZJSUFLblBQSUhJdlpTbTA4R1F6MVp3NjRxam4yWk5zNHFRUkFrdjhmS2xtendQMUFHSHNIWkZBK2VzCnlmdHJ2TFpkUjJPUUgzL0paVkZ2NGVWQkNVekZZcDBUTUNFV05lWmpmL1JvZVB1Wm5kbmNDMGg1eFBQRkhwb2YKdTRPK1FqZ0s3ZkVqUEI0NG1DTVZickYvNFVldEpnbmlGb2ZWRlRqTm1TUGYzRmwrYzZmVzFESzE5TFg0Qk1TSwpNd0tiTFF0disvRlRkYmZvSGQwdER5dUxjMm5YR3FpcG02cHoxbTE5MERyK244K3I1N25GRTFEV1BranpFT3dVCi9lb3VtTHRZTXNFaXRnZ3FsdkxTVFNseXVKSVJYVXZmczdpcXFPYVg1OGJhNjRzdllRSURBUUFCbzFNd1VUQWQKQmdOVkhRNEVGZ1FVbGo0a1FvcUs5U2swclhIK1JBbG4wTnFhdndvd0h3WURWUjBqQkJnd0ZvQVVsajRrUW9xSwo5U2swclhIK1JBbG4wTnFhdndvd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBTkJna3Foa2lHOXcwQkFRc0ZBQU9DCkFRRUFoZzJkM2ZLd0svaXB4ZzR2Q2s0V3ZORXdhNjY3ejY5aU9GYm1oaVowUEIyRG5KVjlMNFV5ZEtXM0ZkQU0KK08rNGZaZkZ1K2ZHbmZjOGRvaXBvVHJ5Rlg3Uklocm51WlhsWUlDaFgrNE9Gem5WYnlCQjBKKzBHS2p1L21jTAorQ1N6blJsdVdKQlpmU0xQSlNLeG9yelRYeWFEZTBxUEcyWUlGZGNQWGlvZHVRN0RVdTc5bVc5Mi8rTGpPN1BtCmEvQ0pLOWhPcUVxeUFwOGR5V1QvdWJwcHZKaHBGbTkwUTdxTENSMnp4ak1qQ082V3FOUnZYajdkV0E4WVRaOGkKL3hBbk1qQXlaOVVoM2doOS9HNy9Hck1tWWxaK2dUNkFHbjRIVVZ0UVdERkxMMmtNVXB4ZWxDZUhJOUdlUXN0eQpsdUU0Q1dxZmFiRXlTcko3cGpXMFJFNFUrZz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+    service:
+      name: quarantine-webhook
+      namespace: dev
+      path: /validate-ops-soer3n-info-v1alpha1-quarantine
+      port: 443
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: quarantine.webhook.svc
+  rules:
+  - apiGroups:
+    - ops.soer3n.info
+    apiVersions:
+    - 'v1alpha1'
+    operations:
+    - CREATE
+    resources:
+    - quarantines
+  sideEffects: None
+  timeoutSeconds: 10

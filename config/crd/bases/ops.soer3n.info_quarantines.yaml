@@ -60,6 +60,20 @@ spec:
                       type: string
                     rescale:
                       type: boolean
+                    resources:
+                      items:
+                        description: Resource defines a workload to isolate on a node
+                        properties:
+                          keep:
+                            type: boolean
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                          type:
+                            type: string
+                        type: object
+                      type: array
                   required:
                   - name
                   type: object
