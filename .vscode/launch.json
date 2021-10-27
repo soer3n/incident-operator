@@ -56,7 +56,7 @@
             "request": "launch",
             "mode": "test",
             "program": "${workspaceFolder}/tests/unit/",
-            "args": ["-test.run", "TestStartQuarantine"],
+            "args": ["-test.run", "TestPrepareQuarantine"],
             "env": {},
             "showLog": true
     },

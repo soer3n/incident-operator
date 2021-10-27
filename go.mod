@@ -7,7 +7,6 @@ require (
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
-	github.com/prometheus/common v0.26.0
 	github.com/soer3n/yaho v0.0.0-20211008185703-d974e70a33a2
 	github.com/spf13/cobra v1.1.3
 	github.com/stretchr/testify v1.7.0

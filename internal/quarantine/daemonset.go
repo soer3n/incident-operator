@@ -2,6 +2,8 @@ package quarantine
 
 import (
 	"context"
+	"encoding/json"
+	"log"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -9,11 +11,13 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"k8s.io/client-go/kubernetes"
 )
 
 var obj *v1.DaemonSet
+var patch []byte
 var err error
 
 func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
@@ -38,9 +42,21 @@ func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode
 			Effect: quarantineTaintEffect,
 		})
 
-		updateOpts := metav1.UpdateOptions{}
+		patchPayload := v1.DaemonSetSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Tolerations: obj.Spec.Template.Spec.Tolerations,
+				},
+			},
+		}
 
-		if _, err = c.AppsV1().DaemonSets(ds.Namespace).Update(context.TODO(), obj, updateOpts); err != nil {
+		patchOpts := metav1.PatchOptions{}
+
+		if patch, err = json.Marshal(patchPayload); err != nil {
+			return err
+		}
+
+		if _, err = c.AppsV1().DaemonSets(ds.Namespace).Patch(context.TODO(), ds.Name, types.StrategicMergePatchType, patch, patchOpts); err != nil {
 			return err
 		}
 
@@ -84,11 +100,23 @@ func (ds Daemonset) removeToleration(c kubernetes.Interface) error {
 		}
 	}
 
-	obj.Spec.Template.Spec.Tolerations = tolerations
-	updateOpts := metav1.UpdateOptions{}
+	patchPayload := v1.DaemonSetSpec{
+		Template: corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Tolerations: tolerations,
+			},
+		},
+	}
 
-	// get affected daemonset
-	if _, err = c.AppsV1().DaemonSets(ds.Namespace).Update(context.TODO(), obj, updateOpts); err != nil {
+	patchOpts := metav1.PatchOptions{}
+
+	if patch, err = json.Marshal(patchPayload); err != nil {
+		return err
+	}
+
+	log.Println(string(patch))
+
+	if _, err = c.AppsV1().DaemonSets(ds.Namespace).Patch(context.TODO(), ds.Name, types.StrategicMergePatchType, patch, patchOpts); err != nil {
 		return err
 	}
 

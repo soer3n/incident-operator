@@ -114,28 +114,45 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) {
 	for _, r := range rs {
 		switch t := r.Type; t {
 		case dsType:
-			for _, v := range n.Daemonsets {
-				if v.Name == r.Name && v.Namespace == r.Namespace {
-					continue
-				}
-				n.Daemonsets = append(n.Daemonsets, Daemonset{
-					Name:      v.Name,
-					Namespace: v.Namespace,
-					Keep:      v.Keep,
-				})
+			if len(n.Daemonsets) > 1 {
+				for _, v := range n.Daemonsets {
+					if v.Name == r.Name && v.Namespace == r.Namespace {
+						continue
+					}
+					n.Daemonsets = append(n.Daemonsets, Daemonset{
+						Name:      v.Name,
+						Namespace: v.Namespace,
+						Keep:      v.Keep,
+					})
 
-			}
-		case deploymentType:
-			for _, v := range n.Deployments {
-				if v.Name == r.Name && v.Namespace == r.Namespace {
-					continue
 				}
-				n.Deployments = append(n.Deployments, Deployment{
-					Name:      v.Name,
-					Namespace: v.Namespace,
-					Keep:      v.Keep,
-				})
+				return
 			}
+			n.Daemonsets = append(n.Daemonsets, Daemonset{
+				Name:      r.Name,
+				Namespace: r.Namespace,
+				Keep:      r.Keep,
+			})
+		case deploymentType:
+			if len(n.Deployments) > 1 {
+				for _, v := range n.Deployments {
+					if v.Name == r.Name && v.Namespace == r.Namespace {
+						continue
+					}
+					n.Deployments = append(n.Deployments, Deployment{
+						Name:      v.Name,
+						Namespace: v.Namespace,
+						Keep:      v.Keep,
+					})
+
+				}
+				return
+			}
+			n.Deployments = append(n.Deployments, Deployment{
+				Name:      r.Name,
+				Namespace: r.Namespace,
+				Keep:      r.Keep,
+			})
 		}
 	}
 }
