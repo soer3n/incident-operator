@@ -12,12 +12,12 @@ require (
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.6-0.20210908190839-cf92b39a962c // indirect
-	k8s.io/api v0.21.1
-	k8s.io/apimachinery v0.21.1
+	k8s.io/api v0.21.2
+	k8s.io/apimachinery v0.21.2
 	k8s.io/cli-runtime v0.21.0
 	k8s.io/client-go v1.5.2
 	k8s.io/kubectl v0.21.0
-	sigs.k8s.io/controller-runtime v0.9.0
+	sigs.k8s.io/controller-runtime v0.9.2
 	sigs.k8s.io/descheduler v0.21.0
 )
 

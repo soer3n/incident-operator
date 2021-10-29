@@ -3,7 +3,6 @@ package quarantine
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -113,8 +112,6 @@ func (ds Daemonset) removeToleration(c kubernetes.Interface) error {
 	if patch, err = json.Marshal(patchPayload); err != nil {
 		return err
 	}
-
-	log.Println(string(patch))
 
 	if _, err = c.AppsV1().DaemonSets(ds.Namespace).Patch(context.TODO(), ds.Name, types.StrategicMergePatchType, patch, patchOpts); err != nil {
 		return err

@@ -51,9 +51,9 @@ func Run() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
+		MetricsBindAddress:     "0",
 		Port:                   9443,
-		HealthProbeBindAddress: probeAddr,
+		HealthProbeBindAddress: "0",
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "71b71325.soer3n.info",
 	})

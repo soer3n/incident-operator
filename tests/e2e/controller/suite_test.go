@@ -15,9 +15,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package e2e
+package controller
 
 import (
+	"context"
 	"crypto/rand"
 	"math/big"
 	mr "math/rand"
@@ -28,7 +29,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -37,6 +37,12 @@ import (
 
 	opsv1alpha1 "github.com/soer3n/incident-operator/api/v1alpha1"
 	qcontrollers "github.com/soer3n/incident-operator/controllers"
+	admissionv1 "k8s.io/api/admission/v1"
+	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	v1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -46,7 +52,11 @@ import (
 var k8sClient, testClient client.Client
 
 var err error
+var cfg *rest.Config
+var whPort int
 var testEnv *envtest.Environment
+var ctx context.Context
+var cancel context.CancelFunc
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -60,29 +70,56 @@ var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
 
+	ctx, cancel = context.WithCancel(context.TODO())
+
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 	}
 
-	cfg, err := testEnv.Start()
+	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	err = opsv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
+	scheme := runtime.NewScheme()
 
 	//+kubebuilder:scaffold:scheme
 
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
 	logf.Log.Info("namespace:", "namespace", "default")
 
-	mgr, err := ctrl.NewManager(cfg, ctrl.Options{Scheme: scheme.Scheme})
+	webhookInstallOptions := &testEnv.WebhookInstallOptions
+	whPort = webhookInstallOptions.LocalServingPort
+	whCertDir := webhookInstallOptions.LocalServingCertDir
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:             scheme,
+		Host:               "127.0.0.1",
+		Port:               whPort,
+		CertDir:            whCertDir,
+		LeaderElection:     false,
+		MetricsBindAddress: "0",
+	})
+
 	Expect(err).NotTo(HaveOccurred(), "failed to create manager")
+
+	err = opsv1alpha1.AddToScheme(mgr.GetScheme())
+	Expect(err).NotTo(HaveOccurred())
+
+	err = admissionv1beta1.AddToScheme(mgr.GetScheme())
+	Expect(err).NotTo(HaveOccurred())
+
+	err = admissionv1.AddToScheme(mgr.GetScheme())
+	Expect(err).NotTo(HaveOccurred())
+
+	err = v1.AddToScheme(mgr.GetScheme())
+	Expect(err).NotTo(HaveOccurred())
+
+	err = corev1.AddToScheme(mgr.GetScheme())
+	Expect(err).NotTo(HaveOccurred())
 
 	err = (&qcontrollers.QuarantineReconciler{
 		Client: mgr.GetClient(),
@@ -91,20 +128,26 @@ var _ = BeforeSuite(func(done Done) {
 	}).SetupWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred(), "failed to setup controller")
 
+	err = (&opsv1alpha1.Quarantine{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
 	go func() {
-		err := mgr.Start(ctrl.SetupSignalHandler())
-		Expect(err).NotTo(HaveOccurred(), "failed to start incident manager")
+		err = mgr.Start(ctx)
+		if err != nil {
+			Expect(err).NotTo(HaveOccurred())
+		}
 	}()
 
-	testClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	testClient, err = client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
 	Expect(err).NotTo(HaveOccurred())
-	Expect(testClient).NotTo(BeNil())
+	Expect(k8sClient).NotTo(BeNil())
 
 	close(done)
 
 }, 60)
 
 var _ = AfterSuite(func() {
+	cancel()
 	By("tearing down the test environment")
 	err := testEnv.Stop()
 	Expect(err).NotTo(HaveOccurred())

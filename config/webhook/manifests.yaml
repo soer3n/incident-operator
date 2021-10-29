@@ -1,6 +1,6 @@
 
 ---
-apiVersion: admissionregistration.k8s.io/v1
+apiVersion: admissionregistration.k8s.io/v1beta1
 kind: ValidatingWebhookConfiguration
 metadata:
   creationTimestamp: null
@@ -10,10 +10,7 @@ webhooks:
   - v1
   - v1beta1
   clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate
+    url: "https://127.0.0.1:9443/validate-ops-soer3n-info-v1alpha1-quarantine"
   failurePolicy: Fail
   name: vquarantine.kb.io
   rules:
