@@ -15,11 +15,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-package controller
+package webhook
 
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
 	"math/big"
 	mr "math/rand"
 	"os"
@@ -36,11 +37,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	opsv1alpha1 "github.com/soer3n/incident-operator/api/v1alpha1"
-	qcontrollers "github.com/soer3n/incident-operator/controllers"
 	admissionv1 "k8s.io/api/admission/v1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionregv1 "k8s.io/api/admissionregistration/v1"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	//+kubebuilder:scaffold:imports
@@ -53,6 +55,7 @@ var k8sClient, testClient client.Client
 
 var err error
 var cfg *rest.Config
+var whPort int
 var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
@@ -77,6 +80,12 @@ var _ = BeforeSuite(func(done Done) {
 		ErrorIfCRDPathMissing: true,
 	}
 
+	webhookInstallOptions := &testEnv.WebhookInstallOptions
+	whPort = webhookInstallOptions.LocalServingPort
+	whCertDir := webhookInstallOptions.LocalServingCertDir
+
+	initWebhook()
+
 	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
@@ -89,11 +98,13 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
-	logf.Log.Info("namespace:", "namespace", "default")
-
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme: scheme,
-		Host:   "127.0.0.1",
+		Scheme:             scheme,
+		Host:               "127.0.0.1",
+		Port:               whPort,
+		CertDir:            whCertDir,
+		LeaderElection:     false,
+		MetricsBindAddress: "0",
 	})
 
 	Expect(err).NotTo(HaveOccurred(), "failed to create manager")
@@ -113,18 +124,21 @@ var _ = BeforeSuite(func(done Done) {
 	err = corev1.AddToScheme(mgr.GetScheme())
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&qcontrollers.QuarantineReconciler{
-		Client: mgr.GetClient(),
-		Log:    logf.Log,
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr)
-	Expect(err).NotTo(HaveOccurred(), "failed to setup controller")
+	err = (&opsv1alpha1.Quarantine{}).SetupWebhookWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
 
 	testClient, err = client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
+	err = webhookInstallOptions.PrepWithoutInstalling()
+	Expect(err).NotTo(HaveOccurred())
+
+	err = webhookInstallOptions.Install(cfg)
+	Expect(err).NotTo(HaveOccurred())
+
 	go func() {
+		defer GinkgoRecover()
 		if err = mgr.Start(ctx); err != nil {
 			Expect(err).NotTo(HaveOccurred())
 		}
@@ -154,4 +168,42 @@ func randStringRunes(n int) string {
 		b[i] = letterRunes[n.Uint64()]
 	}
 	return string(b)
+}
+
+func initWebhook() {
+	failedTypeV1 := admissionregv1.Fail
+	webhookURL := "https://127.0.0.1:" + fmt.Sprint(whPort) + "/validate-ops-soer3n-info-v1alpha1-quarantine"
+	webhookObj := &admissionregv1.ValidatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ValidatingWebhookConfiguration",
+			APIVersion: "admissionregistration.k8s.io/v1beta1",
+		},
+		Webhooks: []admissionregv1.ValidatingWebhook{
+			{
+				Name: "webhook.test.svc",
+				ClientConfig: admissionregv1.WebhookClientConfig{
+					URL: &webhookURL,
+				},
+				FailurePolicy: &failedTypeV1,
+				Rules: []admissionregv1.RuleWithOperations{
+					{
+						Operations: []admissionregv1.OperationType{"CREATE"},
+						Rule: admissionregv1.Rule{
+							APIGroups:   []string{"ops.soer3n.info"},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"quarantines"},
+						},
+					},
+				},
+			},
+		},
+	}
+	testEnv.WebhookInstallOptions = envtest.WebhookInstallOptions{
+		ValidatingWebhooks: []client.Object{
+			webhookObj,
+		},
+	}
 }
