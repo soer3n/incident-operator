@@ -132,6 +132,12 @@ ENVTEST = $(shell pwd)/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
+ENVTEST_ASSETS_DIR=$(shell pwd)/testbin
+test-setup:
+	mkdir -p ${ENVTEST_ASSETS_DIR}
+	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
+	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR)
+
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 define go-get-tool

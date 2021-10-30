@@ -26,9 +26,11 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	v1alpha1 "github.com/soer3n/incident-operator/api/v1alpha1"
+	"github.com/soer3n/incident-operator/api/v1alpha1"
 )
 
 var quarantineKind *v1alpha1.Quarantine
@@ -42,6 +44,37 @@ var _ = Context("Create a quarantine resource", func() {
 		It("should start with creating dependencies", func() {
 			ctx := context.Background()
 			namespace := "test-" + randStringRunes(7)
+
+			scheme := runtime.NewScheme()
+
+			err = v1alpha1.AddToScheme(scheme)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = v1.AddToScheme(scheme)
+			Expect(err).NotTo(HaveOccurred())
+
+			m, err := manager.New(testEnv.Config, manager.Options{
+				Scheme:  scheme,
+				Port:    33633,
+				Host:    testEnv.WebhookInstallOptions.LocalServingHost,
+				CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			err = (&v1alpha1.Quarantine{}).SetupWebhookWithManager(m)
+			Expect(err).NotTo(HaveOccurred())
+
+			server := m.GetWebhookServer()
+			server.Port = 33633
+
+			ctx, cancel := context.WithCancel(context.Background())
+
+			go func() {
+				_ = server.Start(ctx)
+			}()
+
+			waitForWebhooks()
 
 			By("install a new namespace")
 			quarantineNamespace := &v1.Namespace{
@@ -93,6 +126,8 @@ var _ = Context("Create a quarantine resource", func() {
 			Eventually(
 				GetResourceFunc(context.Background(), client.ObjectKey{Name: quarantineKindName, Namespace: namespace}, deployment),
 				time.Second*20, time.Millisecond*1500).ShouldNot(BeNil())
+
+			cancel()
 		})
 	})
 })
