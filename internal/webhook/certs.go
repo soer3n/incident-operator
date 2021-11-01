@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"math/big"
+	"net"
 	"time"
 )
 
@@ -77,11 +78,14 @@ func (w *Cert) getCertTemplate() *x509.Certificate {
 
 func (w *Cert) create(CommonName string) error {
 
+	localIP := net.ParseIP("127.0.0.1")
+
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
 		Subject: pkix.Name{
 			CommonName: commonName,
 		},
+		IPAddresses:  []net.IP{localIP},
 		DNSNames:     []string{CommonName},
 		NotBefore:    time.Now(),
 		NotAfter:     time.Now().AddDate(10, 0, 0),

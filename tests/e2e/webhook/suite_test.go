@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	"github.com/soer3n/incident-operator/internal/webhook"
 	"github.com/soer3n/incident-operator/webhooks/quarantine"
 
 	opsv1alpha1 "github.com/soer3n/incident-operator/api/v1alpha1"
@@ -66,6 +67,7 @@ var cancel context.CancelFunc
 
 const quarantineWebhookPort = 33633
 const quarantineWebhookPath = "/validate"
+const quarantineWebhookCertDir = "./certs/"
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -89,6 +91,11 @@ var _ = BeforeSuite(func(done Done) {
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
 	}
+
+	err = webhook.InstallWebhook("", "", quarantineWebhookCertDir, true)
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(err).NotTo(HaveOccurred())
 
 	initWebhookConfig()
 	cfg, err = testEnv.Start()
@@ -148,6 +155,7 @@ func randStringRunes(n int) string {
 func initWebhookConfig() {
 	failedTypeV1 := admissionregv1.Fail
 	path := "https://127.0.0.1:" + fmt.Sprint(quarantineWebhookPort) + quarantineWebhookPath
+	webhookCA, _ := os.ReadFile(quarantineWebhookCertDir + "ca.crt")
 	webhookObj := &admissionregv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
@@ -160,7 +168,8 @@ func initWebhookConfig() {
 			{
 				Name: "webhook.test.svc",
 				ClientConfig: admissionregv1.WebhookClientConfig{
-					URL: &path,
+					URL:      &path,
+					CABundle: webhookCA,
 				},
 				FailurePolicy: &failedTypeV1,
 				Rules: []admissionregv1.RuleWithOperations{
@@ -224,6 +233,7 @@ func startWebhookServer() context.CancelFunc {
 		Log:     logf.Log,
 	}
 
+	server.CertDir = quarantineWebhookCertDir
 	server.Register("/validate", &admission.Webhook{
 		Handler: q,
 	})

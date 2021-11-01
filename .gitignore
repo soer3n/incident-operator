@@ -6,7 +6,8 @@
 *.dylib
 bin
 testbin/*
-
+*/certs
+certs
 __debug_bin
 
 # Test binary, build with `go test -c`

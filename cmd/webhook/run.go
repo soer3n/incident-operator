@@ -39,8 +39,10 @@ func Run() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var certDir string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.StringVar(&certDir, "cert-dir", "./certs/", "The directory for storing webhook related certs.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -72,7 +74,7 @@ func Run() {
 	}
 
 	wh := mgr.GetWebhookServer()
-	wh.CertDir = "/home/soer3n/webhook-certs"
+	wh.CertDir = certDir
 	wh.Register("/validate", &admission.Webhook{Handler: &quarantine.QuarantineHandler{
 		Client:  mgr.GetClient(),
 		Decoder: dec,
