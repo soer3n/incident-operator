@@ -35,8 +35,15 @@ jobs:
       run: go test -coverpkg ./internal/... ./tests/unit/...
 
   test-e2e-controllers:
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+        - v1.21.1
+        - v1.20.7
+        - v1.19.11
     runs-on: ubuntu-latest
-    name: test-e2e-controllers
+    name: test-e2e-controllers-${{ matrix.version }}
     needs:
     - build
     steps:
