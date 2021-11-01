@@ -24,11 +24,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
 )
@@ -45,36 +42,7 @@ var _ = Context("Create a quarantine resource", func() {
 			ctx := context.Background()
 			namespace := "test-" + randStringRunes(7)
 
-			scheme := runtime.NewScheme()
-
-			err = v1alpha1.AddToScheme(scheme)
-			Expect(err).NotTo(HaveOccurred())
-
-			err = v1.AddToScheme(scheme)
-			Expect(err).NotTo(HaveOccurred())
-
-			m, err := manager.New(testEnv.Config, manager.Options{
-				Scheme:  scheme,
-				Port:    33633,
-				Host:    testEnv.WebhookInstallOptions.LocalServingHost,
-				CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
-			})
-
-			Expect(err).NotTo(HaveOccurred())
-
-			err = (&v1alpha1.Quarantine{}).SetupWebhookWithManager(m)
-			Expect(err).NotTo(HaveOccurred())
-
-			server := m.GetWebhookServer()
-			server.Port = 33633
-
-			ctx, cancel := context.WithCancel(context.Background())
-
-			go func() {
-				_ = server.Start(ctx)
-			}()
-
-			waitForWebhooks()
+			cancel := startWebhookServer()
 
 			By("install a new namespace")
 			quarantineNamespace := &v1.Namespace{
@@ -105,7 +73,7 @@ var _ = Context("Create a quarantine resource", func() {
 			}
 
 			err = testClient.Create(context.Background(), quarantineKind)
-			Expect(err).NotTo(HaveOccurred(), "failed to create quarantine resource")
+			Expect(err).NotTo(HaveOccurred(), "failed to avoid create quarantine resource")
 
 			deployment := &v1alpha1.Quarantine{}
 
@@ -138,10 +106,6 @@ func GetResourceFunc(ctx context.Context, key client.ObjectKey, obj *v1alpha1.Qu
 			return err
 		}
 
-		if len(obj.Status.Conditions) > 0 {
-			return nil
-		}
-
-		return &errors.StatusError{}
+		return nil
 	}
 }

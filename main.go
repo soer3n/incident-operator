@@ -24,6 +24,6 @@ func NewRootCmd() *cobra.Command {
 
 	cmd.AddCommand(appcmd.NewOperatorCmd())
 	cmd.AddCommand(appcmd.NewWebhookCmd())
-	cmd.AddCommand(appcmd.NewJobRescheduleCmd())
+	cmd.AddCommand(appcmd.NewTasksCmd())
 	return cmd
 }

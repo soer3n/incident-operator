@@ -189,9 +189,3 @@ func (r *QuarantineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithOptions(controller.Options{CacheSyncTimeout: time.Second * 20}).
 		Complete(r)
 }
-
-func (r *QuarantineReconciler) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&v1alpha1.Quarantine{}).
-		Complete()
-}

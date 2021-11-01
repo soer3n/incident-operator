@@ -15,7 +15,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
 	opsv1alpha1 "github.com/soer3n/incident-operator/api/v1alpha1"
+	"github.com/soer3n/incident-operator/webhooks/quarantine"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -62,14 +65,19 @@ func Run() {
 		os.Exit(1)
 	}
 
-	//whConf := mgr.GetWebhookServer()
-	//whConf.CertDir = "/home/soer3n/webhook-certs"
-
-	if err = (&opsv1alpha1.Quarantine{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "Quarantine")
+	var dec *admission.Decoder
+	if dec, err = admission.NewDecoder(scheme); err != nil {
+		setupLog.Error(err, "unable to setup admission decoder")
 		os.Exit(1)
 	}
-	//+kubebuilder:scaffold:builder
+
+	wh := mgr.GetWebhookServer()
+	wh.CertDir = "/home/soer3n/webhook-certs"
+	wh.Register("/validate", &admission.Webhook{Handler: &quarantine.QuarantineHandler{
+		Client:  mgr.GetClient(),
+		Decoder: dec,
+		Log:     ctrl.Log.WithName("webhook").WithName("ops").WithName("Quarantine"),
+	}})
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")

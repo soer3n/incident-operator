@@ -33,9 +33,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/soer3n/incident-operator/webhooks/quarantine"
 
 	opsv1alpha1 "github.com/soer3n/incident-operator/api/v1alpha1"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -58,6 +63,9 @@ var cfg *rest.Config
 var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
+
+const quarantineWebhookPort = 33633
+const quarantineWebhookPath = "/validate"
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -82,7 +90,7 @@ var _ = BeforeSuite(func(done Done) {
 		ErrorIfCRDPathMissing: true,
 	}
 
-	initWebhook()
+	initWebhookConfig()
 	cfg, err = testEnv.Start()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
@@ -137,9 +145,9 @@ func randStringRunes(n int) string {
 	return string(b)
 }
 
-func initWebhook() {
+func initWebhookConfig() {
 	failedTypeV1 := admissionregv1.Fail
-	path := "https://127.0.0.1:" + fmt.Sprint(33633) + "/validate-ops-soer3n-info-v1alpha1-quarantine"
+	path := "https://127.0.0.1:" + fmt.Sprint(quarantineWebhookPort) + quarantineWebhookPath
 	webhookObj := &admissionregv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
@@ -176,16 +184,82 @@ func initWebhook() {
 }
 
 func waitForWebhooks() {
-	port := 33633
-
 	timeout := 1 * time.Second
+
 	for {
 		time.Sleep(1 * time.Second)
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), timeout)
+		conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(quarantineWebhookPort)), timeout)
 		if err != nil {
 			continue
 		}
 		conn.Close()
 		return
 	}
+}
+
+func startWebhookServer() context.CancelFunc {
+	scheme := runtime.NewScheme()
+
+	err = opsv1alpha1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = corev1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	m, err := manager.New(testEnv.Config, manager.Options{
+		Scheme:  scheme,
+		Port:    quarantineWebhookPort,
+		Host:    testEnv.WebhookInstallOptions.LocalServingHost,
+		CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
+	})
+
+	Expect(err).NotTo(HaveOccurred())
+
+	server := m.GetWebhookServer()
+	dec, _ := admission.NewDecoder(scheme)
+
+	q := &quarantine.QuarantineHandler{
+		Client:  getFakeClient(),
+		Decoder: dec,
+		Log:     logf.Log,
+	}
+
+	server.Register("/validate", &admission.Webhook{
+		Handler: q,
+	})
+
+	Expect(err).NotTo(HaveOccurred())
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		_ = m.Start(ctx)
+	}()
+
+	waitForWebhooks()
+
+	return cancel
+}
+
+func getFakeClient() client.WithWatch {
+
+	quarantineControllerList := &corev1.PodList{
+		Items: []corev1.Pod{
+			{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "foo",
+					Namespace: "foo",
+					Labels: map[string]string{
+						"component": "incident-controller-manager",
+					},
+				},
+				Spec: corev1.PodSpec{
+					NodeName: "dev-cluster-worker",
+				},
+			},
+		},
+	}
+
+	objs := []runtime.Object{quarantineControllerList}
+	return fake.NewFakeClient(objs...)
 }

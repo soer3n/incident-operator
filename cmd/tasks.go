@@ -8,6 +8,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// NewTaskCmd represents the api subcommand
+func NewTasksCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "task",
+		Short: "runs tasks related to quarantine",
+		Long:  `quarantine manager jobs`,
+	}
+
+	cmd.AddCommand(NewJobRescheduleCmd())
+
+	return cmd
+}
+
 // NewJobRescheduleCmd represents the api subcommand
 func NewJobRescheduleCmd() *cobra.Command {
 	cmd := &cobra.Command{
