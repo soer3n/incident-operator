@@ -20,12 +20,26 @@ func NewWebhookCmd() *cobra.Command {
 }
 
 func newWebhookServeCmd() *cobra.Command {
-	return &cobra.Command{
+
+	metricsAddr := ":8080"
+	probeAddr := ":8081"
+	// certDir := "./certs/"
+	enableLeaderElection := false
+
+	cmd := &cobra.Command{
 		Use:   "serve",
 		Short: "runs backend for webhook",
 		Long:  `webhook application`,
 		Run: func(cmd *cobra.Command, args []string) {
-			webhook.Run()
+			certDir, err := cmd.Flags().GetString("cert-dir")
+
+			if err != nil {
+				return
+			}
+			webhook.Run(certDir, metricsAddr, probeAddr, enableLeaderElection)
 		},
 	}
+
+	cmd.PersistentFlags().String("cert-dir", "./certs/", "directory where to find certs")
+	return cmd
 }

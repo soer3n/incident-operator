@@ -23,10 +23,8 @@ import (
 	"fmt"
 	"math/big"
 	mr "math/rand"
-	"net"
 	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
 	"time"
 
@@ -40,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	"github.com/soer3n/incident-operator/internal/webhook"
 	"github.com/soer3n/incident-operator/webhooks/quarantine"
 
 	opsv1alpha1 "github.com/soer3n/incident-operator/api/v1alpha1"
@@ -67,7 +64,7 @@ var cancel context.CancelFunc
 
 const quarantineWebhookPort = 33633
 const quarantineWebhookPath = "/validate"
-const quarantineWebhookCertDir = "./certs/"
+const quarantineWebhookCertDir = "./bin/"
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -79,7 +76,7 @@ func TestAPIs(t *testing.T) {
 
 var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
-	// Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
+	//Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
 	Expect(os.Setenv("TEST_ASSET_KUBE_APISERVER", "../../../testbin/bin/kube-apiserver")).To(Succeed())
 	Expect(os.Setenv("TEST_ASSET_ETCD", "../../../testbin/bin/etcd")).To(Succeed())
 	Expect(os.Setenv("TEST_ASSET_KUBECTL", "../../../testbin/bin/kubectl")).To(Succeed())
@@ -92,8 +89,8 @@ var _ = BeforeSuite(func(done Done) {
 		ErrorIfCRDPathMissing: true,
 	}
 
-	err = webhook.InstallWebhook("", "", quarantineWebhookCertDir, true)
-	Expect(err).NotTo(HaveOccurred())
+	//err = webhook.InstallWebhook("webhook.svc.default", "default", quarantineWebhookCertDir, true)
+	//Expect(err).NotTo(HaveOccurred())
 
 	Expect(err).NotTo(HaveOccurred())
 
@@ -155,7 +152,7 @@ func randStringRunes(n int) string {
 func initWebhookConfig() {
 	failedTypeV1 := admissionregv1.Fail
 	path := "https://127.0.0.1:" + fmt.Sprint(quarantineWebhookPort) + quarantineWebhookPath
-	webhookCA, _ := os.ReadFile(quarantineWebhookCertDir + "ca.crt")
+	//webhookCA, _ := os.ReadFile(quarantineWebhookCertDir + "ca.crt")
 	webhookObj := &admissionregv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
@@ -168,8 +165,7 @@ func initWebhookConfig() {
 			{
 				Name: "webhook.test.svc",
 				ClientConfig: admissionregv1.WebhookClientConfig{
-					URL:      &path,
-					CABundle: webhookCA,
+					URL: &path,
 				},
 				FailurePolicy: &failedTypeV1,
 				Rules: []admissionregv1.RuleWithOperations{
@@ -189,20 +185,6 @@ func initWebhookConfig() {
 		ValidatingWebhooks: []client.Object{
 			webhookObj,
 		},
-	}
-}
-
-func waitForWebhooks() {
-	timeout := 1 * time.Second
-
-	for {
-		time.Sleep(1 * time.Second)
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(quarantineWebhookPort)), timeout)
-		if err != nil {
-			continue
-		}
-		conn.Close()
-		return
 	}
 }
 
@@ -233,7 +215,6 @@ func startWebhookServer() context.CancelFunc {
 		Log:     logf.Log,
 	}
 
-	server.CertDir = quarantineWebhookCertDir
 	server.Register("/validate", &admission.Webhook{
 		Handler: q,
 	})
@@ -245,8 +226,6 @@ func startWebhookServer() context.CancelFunc {
 	go func() {
 		_ = m.Start(ctx)
 	}()
-
-	waitForWebhooks()
 
 	return cancel
 }

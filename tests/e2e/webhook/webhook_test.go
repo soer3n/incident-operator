@@ -19,6 +19,9 @@ package webhook
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
+	"net"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -43,6 +46,19 @@ var _ = Context("Create a quarantine resource", func() {
 			namespace := "test-" + randStringRunes(7)
 
 			cancel := startWebhookServer()
+
+			d := &net.Dialer{Timeout: time.Second}
+			Eventually(func() error {
+				serverURL := fmt.Sprintf("%s:%d", testEnv.WebhookInstallOptions.LocalServingHost, quarantineWebhookPort)
+				conn, err := tls.DialWithDialer(d, "tcp", serverURL, &tls.Config{
+					InsecureSkipVerify: true,
+				})
+				if err != nil {
+					return err
+				}
+				conn.Close()
+				return nil
+			}).Should(Succeed())
 
 			By("install a new namespace")
 			quarantineNamespace := &v1.Namespace{
