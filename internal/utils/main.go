@@ -19,7 +19,7 @@ func Contains(list []string, s string) bool {
 func WriteFile(name, path string, content []byte) error {
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		if err := os.MkdirAll(path, 0755); err != nil {
+		if err := os.MkdirAll(path, 0750); err != nil {
 			return err
 		}
 	}

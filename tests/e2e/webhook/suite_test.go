@@ -64,7 +64,6 @@ var cancel context.CancelFunc
 
 const quarantineWebhookPort = 33633
 const quarantineWebhookPath = "/validate"
-const quarantineWebhookCertDir = "./bin/"
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -249,6 +248,5 @@ func getFakeClient() client.WithWatch {
 		},
 	}
 
-	objs := []runtime.Object{quarantineControllerList}
-	return fake.NewFakeClient(objs...)
+	return fake.NewClientBuilder().WithRuntimeObjects(quarantineControllerList).Build()
 }

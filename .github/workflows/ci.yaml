@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - dev
   pull_request:
     branches:
       - master
@@ -75,4 +74,4 @@ jobs:
     - name: install binaries for testing
       run: make test-setup
     - name: test controllers
-      run: ACK_GINKGO_DEPRECATIONS=1.16.4 go test -coverpkg ./api/... ./tests/e2e/webhook/...
+      run: ACK_GINKGO_DEPRECATIONS=1.16.4 go test -coverpkg ./webhooks/... ./tests/e2e/webhook/...
