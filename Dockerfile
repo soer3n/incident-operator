@@ -15,6 +15,7 @@ COPY api/ api/
 COPY cmd/ cmd/
 COPY internal/ internal/
 COPY controllers/ controllers/
+COPY webhooks/ webhooks/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o manager main.go
