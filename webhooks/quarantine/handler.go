@@ -52,12 +52,12 @@ func (h *QuarantineHandler) ValidateCreate() error {
 
 	if pod, err = h.getControllerPod(); err != nil {
 		h.Log.Info("error on getting controller pod")
-		return errors.New("error on getting controller pod")
+		return err
 	}
 
 	if h.controllerShouldBeRescheduled(pod.Spec.NodeName) {
 		h.Log.Info("controller pod is on a node marked for isolation")
-		return errors.New("controller pod is on a node marked for isolation")
+		return err
 	}
 
 	h.Log.Info("controller pod is on a valid node")

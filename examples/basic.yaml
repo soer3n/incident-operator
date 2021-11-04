@@ -7,14 +7,8 @@ spec:
     enabled: true
     image: nicolaka/netshoot
   nodes:
-  - name: node1
+  - name: dev-cluster-worker2
     isolate: true # add taint to node
-  - name: node3
-    isolate: true # add taint to node
-  resources:
-  - type: daemonset
-    name: deployed-ds
-    namespace: my-namespace
-    keep: true
+  resources: []
   #- type: deployment
   #  name: deployment-resource  
