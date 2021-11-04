@@ -17,6 +17,7 @@ import (
 
 var err error
 var pod *corev1.Pod
+var obj *v1alpha1.Quarantine
 
 const quarantineControllerLabelKey = "component"
 const quarantineControllerLabelValue = "incident-controller-manager"
@@ -24,23 +25,21 @@ const quarantineControllerLabelValue = "incident-controller-manager"
 // Handle handles admission requests.
 func (h *QuarantineHandler) Handle(ctx context.Context, req admission.Request) admission.Response {
 
-	if err := h.manageObject(req); err != nil {
+	if obj, err = h.manageObject(req); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
 	switch t := req.Operation; t {
 	case admissionv1.Create:
-		if err := h.ValidateCreate(); err != nil {
-			return admission.Denied(err.Error())
-		}
+		err = h.ValidateCreate()
 	case admissionv1.Update:
-		if err := h.ValidateUpdate(req.OldObject.Object); err != nil {
-			return admission.Denied(err.Error())
-		}
+		err = h.ValidateUpdate(req.OldObject.Object)
 	case admissionv1.Delete:
-		if err := h.ValidateDelete(); err != nil {
-			return admission.Denied(err.Error())
-		}
+		err = h.ValidateDelete()
+	}
+
+	if err != nil {
+		return admission.Denied(err.Error())
 	}
 
 	return admission.Allowed("controller is on a valid node")
@@ -48,16 +47,16 @@ func (h *QuarantineHandler) Handle(ctx context.Context, req admission.Request) a
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (h *QuarantineHandler) ValidateCreate() error {
-	h.Log.Info("validate create", "name", h.Object.Name)
+	h.Log.Info("validate create", "name", obj.Name)
 
 	if pod, err = h.getControllerPod(); err != nil {
 		h.Log.Info("error on getting controller pod")
 		return err
 	}
 
-	if h.controllerShouldBeRescheduled(pod.Spec.NodeName) {
+	if ok := h.controllerShouldBeRescheduled(pod.Spec.NodeName); ok {
 		h.Log.Info("controller pod is on a node marked for isolation")
-		return err
+		return errors.New("controller pod is on a node marked for isolation")
 	}
 
 	h.Log.Info("controller pod is on a valid node")
@@ -67,7 +66,7 @@ func (h *QuarantineHandler) ValidateCreate() error {
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (h *QuarantineHandler) ValidateUpdate(old runtime.Object) error {
-	h.Log.Info("validate update", "name", h.Object.Name)
+	h.Log.Info("validate update", "name", obj.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
 	return nil
@@ -75,7 +74,7 @@ func (h *QuarantineHandler) ValidateUpdate(old runtime.Object) error {
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (h *QuarantineHandler) ValidateDelete() error {
-	h.Log.Info("validate delete", "name", h.Object.Name)
+	h.Log.Info("validate delete", "name", obj.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
@@ -83,7 +82,7 @@ func (h *QuarantineHandler) ValidateDelete() error {
 
 func (h *QuarantineHandler) controllerShouldBeRescheduled(nodeName string) bool {
 
-	for _, n := range h.Object.Spec.Nodes {
+	for _, n := range obj.Spec.Nodes {
 		if n.Name == nodeName {
 			return true
 		}
@@ -92,19 +91,15 @@ func (h *QuarantineHandler) controllerShouldBeRescheduled(nodeName string) bool 
 	return false
 }
 
-func (h *QuarantineHandler) manageObject(req admission.Request) error {
+func (h *QuarantineHandler) manageObject(req admission.Request) (*v1alpha1.Quarantine, error) {
 
 	quarantine := &v1alpha1.Quarantine{}
 
-	if h.Object == nil {
-		if err := h.Decoder.Decode(req, quarantine); err != nil {
-			return err
-		}
-
+	if err := h.Decoder.Decode(req, quarantine); err != nil {
+		return quarantine, err
 	}
 
-	h.Object = quarantine
-	return nil
+	return quarantine, nil
 }
 
 func (h *QuarantineHandler) getControllerPod() (*corev1.Pod, error) {
