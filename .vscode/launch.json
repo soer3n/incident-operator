@@ -21,7 +21,7 @@
             "mode": "debug",
             // "debugAdapter": "legacy",
             "program": "${workspaceFolder}/main.go",
-            "args": ["webhook", "serve"]
+            "args": ["webhook", "serve", "--cert-dir", "/tmp/k8s-webhook-server/serving-certs/"]
         },
         {
             "name": "Launch webhook cert creator",

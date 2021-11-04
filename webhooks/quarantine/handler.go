@@ -8,7 +8,7 @@ import (
 	"github.com/soer3n/incident-operator/api/v1alpha1"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -113,14 +113,22 @@ func (h *QuarantineHandler) getControllerPod() (*corev1.Pod, error) {
 	var pod *corev1.Pod
 	var err error
 
+	selector, err := labels.Parse(quarantineControllerLabelKey + "=" + quarantineControllerLabelValue)
+
+	if err != nil {
+		return pod, err
+	}
+
 	listOpts := client.ListOptions{
-		Raw: &metav1.ListOptions{
-			LabelSelector: quarantineControllerLabelKey + "=" + quarantineControllerLabelValue,
-		},
+		LabelSelector: selector,
 	}
 
 	if err = h.Client.List(context.TODO(), pods, &listOpts); err != nil {
 		return pod, err
+	}
+
+	if len(pods.Items) == 0 {
+		return pod, errors.New("no controller pod found")
 	}
 
 	if len(pods.Items) > 1 {

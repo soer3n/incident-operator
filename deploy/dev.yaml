@@ -91,7 +91,7 @@ webhooks:
     service:
       name: quarantine-webhook
       namespace: dev
-      path: /validate-ops-soer3n-info-v1alpha1-quarantine
+      path: /validate
       port: 443
   failurePolicy: Fail
   matchPolicy: Equivalent
