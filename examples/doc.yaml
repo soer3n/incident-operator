@@ -7,14 +7,14 @@ spec:
     enabled: true
     image: nicolaka/netshoot
   nodes:
-  - name: node1
+  - name: mngt-mngt-pool-f47cdbdfc-2mxtb
     isolate: true # add taint to node
-  - name: node3
+  - name: mngt-mngt-pool-f47cdbdfc-r792b
     isolate: true # add taint to node
   resources:
   - type: daemonset
-    name: deployed-ds
-    namespace: my-namespace
+    name: loki-stack-promtail
+    namespace: loki-stack
     keep: true
   #- type: deployment
   #  name: deployment-resource  
