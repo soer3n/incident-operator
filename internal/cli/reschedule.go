@@ -33,11 +33,11 @@ func RescheduleQuarantineController(excludedNodes []string) error {
 	typedClient := utilsClient.TypedClient
 	discoveryClient := utilsClient.DiscoverClient
 
-	if pod, err = GetControllerPod(typedClient); err != nil {
+	if pod, err = getControllerPod(typedClient); err != nil {
 		return err
 	}
 
-	if node, err = GetControllerNode(typedClient, pod); err != nil {
+	if node, err = getControllerNode(typedClient, pod); err != nil {
 		return err
 	}
 

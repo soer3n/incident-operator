@@ -9,4 +9,12 @@ spec:
   nodes:
   - name: mngt-mngt-pool-f47cdbdfc-2mxtb
     isolate: true # add taint to node
-  resources: []
+  - name: mngt-mngt-pool-f47cdbdfc-r792b
+    isolate: true # add taint to node
+  resources:
+  - type: daemonset
+    name: loki-stack-promtail
+    namespace: loki-stack
+    keep: true
+  #- type: deployment
+  #  name: deployment-resource  
