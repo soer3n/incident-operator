@@ -6,6 +6,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	appsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	policyv1beta1 "k8s.io/client-go/kubernetes/typed/policy/v1beta1"
 )
 
 // Client represents mock struct for k8s runtime client
@@ -30,6 +31,11 @@ type CoreV1 struct {
 type AppsV1 struct {
 	mock.Mock
 	appsv1.AppsV1Interface
+}
+
+type PolicyV1Beta1 struct {
+	mock.Mock
+	policyv1beta1.PolicyV1beta1Interface
 }
 
 // NodeV1 represents mock struct for k8s runtime client  v1 node resources

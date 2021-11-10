@@ -5,7 +5,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 
 	"k8s.io/kubectl/pkg/drain"
 
@@ -48,6 +47,30 @@ func (n Node) prepare() error {
 	if n.Isolate {
 		if err := n.addTaint(); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func (n *Node) evictPods() error {
+
+	var pods *corev1.PodList
+	var err error
+
+	listOpts := metav1.ListOptions{
+		FieldSelector: "spec.nodeName=" + n.Name,
+	}
+
+	if pods, err = n.Flags.Client.CoreV1().Pods("").List(context.TODO(), listOpts); err != nil {
+		return err
+	}
+
+	for _, pod := range pods.Items {
+		if pod.Spec.PriorityClassName != "system-node-critical" && !podIsInQuarantine(pod) {
+			if err := evictPod(pod, n.Flags.Client); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -157,28 +180,68 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) {
 	}
 }
 
-func (n *Node) parseFlags(c kubernetes.Interface) {
+func (n *Node) parseFlags(baseFlags, nodeFlags v1alpha1.Flags) {
 
-	n.Flags = &drain.Helper{
-		IgnoreAllDaemonSets: true,
-		DisableEviction:     false,
-		DeleteEmptyDirData:  true,
-		PodSelector:         "!" + quarantinePodLabelPrefix + quarantinePodSelector,
-		Force:               false,
-		Ctx:                 context.TODO(),
-		Client:              c,
-		ErrOut:              n.IOStreams.ErrOut,
-		Out:                 n.IOStreams.Out,
+	flags := v1alpha1.Flags{}
+
+	flags = n.mergeFlags(flags, baseFlags)
+	flags = n.mergeFlags(flags, nodeFlags)
+
+	n.Flags.DeleteEmptyDirData = *flags.DeleteEmptyDirData
+	n.Flags.DisableEviction = *flags.DisableEviction
+	n.Flags.Force = *flags.Force
+	n.Flags.IgnoreAllDaemonSets = *flags.IgnoreAllDaemonSets
+	n.Flags.IgnoreErrors = *flags.IgnoreErrors
+}
+
+func (n *Node) mergeFlags(baseFlags, mergeFlags v1alpha1.Flags) v1alpha1.Flags {
+
+	if mergeFlags.DeleteEmptyDirData != nil {
+		baseFlags.DeleteEmptyDirData = mergeFlags.DeleteEmptyDirData
 	}
+
+	if mergeFlags.DisableEviction != nil {
+		baseFlags.DisableEviction = mergeFlags.DisableEviction
+	}
+
+	if mergeFlags.Force != nil {
+		baseFlags.Force = mergeFlags.Force
+	}
+
+	if mergeFlags.IgnoreAllDaemonSets != nil {
+		baseFlags.IgnoreAllDaemonSets = mergeFlags.IgnoreAllDaemonSets
+	}
+
+	if mergeFlags.IgnoreErrors != nil {
+		baseFlags.IgnoreErrors = mergeFlags.IgnoreErrors
+	}
+
+	return baseFlags
 }
 
 func (n Node) disableScheduling() error {
 
 	nodeObj := n.getNodeAPIObject()
 
+	n.Logger.Info("cordon...")
+
 	if err := drain.RunCordonOrUncordon(n.Flags, nodeObj, true); err != nil {
 		return err
 	}
+
+	timeout := int64(20)
+	listOpts := metav1.ListOptions{
+		Watch:          true,
+		LabelSelector:  "kubernetes.io/hostname=" + n.Name,
+		TimeoutSeconds: &timeout,
+	}
+	w, err := n.Flags.Client.CoreV1().Nodes().Watch(context.TODO(), listOpts)
+
+	if err != nil {
+		return err
+	}
+
+	waitForResource(w, n.Logger)
 
 	return nil
 }
@@ -187,7 +250,13 @@ func (n Node) enableScheduling() error {
 
 	nodeObj := n.getNodeAPIObject()
 
+	n.Logger.Info("uncordon...")
+
 	if err := drain.RunCordonOrUncordon(n.Flags, nodeObj, false); err != nil {
+		return err
+	}
+
+	if err := n.waitForUpdate(); err != nil {
 		return err
 	}
 
@@ -214,6 +283,10 @@ func (n Node) addTaint() error {
 		return err
 	}
 
+	if err := n.waitForUpdate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -234,11 +307,19 @@ func (n Node) removeTaint() error {
 		return err
 	}
 
+	if err := n.waitForUpdate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (n Node) deschedulePods() error {
 	if err := drain.RunNodeDrain(n.Flags, n.Name); err != nil {
+		return err
+	}
+
+	if err := n.waitForUpdate(); err != nil {
 		return err
 	}
 
@@ -269,6 +350,10 @@ func (n Node) updateNodeAPIObject(nodeObj *corev1.Node) error {
 		return err
 	}
 
+	return nil
+}
+
+func (n Node) waitForUpdate() error {
 	timeout := int64(20)
 	listOpts := metav1.ListOptions{
 		Watch:          true,

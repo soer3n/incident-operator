@@ -1,6 +1,7 @@
 package quarantine
 
 import (
+	"context"
 	"errors"
 	"os"
 
@@ -9,6 +10,7 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubectl/pkg/cmd/util"
+	"k8s.io/kubectl/pkg/drain"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
 
@@ -19,7 +21,8 @@ import (
 const quarantinePodSelector = "quarantine"
 const quarantineTaintKey = quarantinePodSelector
 const quarantineTaintValue = "true"
-const quarantineTaintEffect = "NoExecute"
+const quarantineTaintOperator = "Exists"
+const quarantineTaintEffect = "NoSchedule"
 const quarantineStatusActiveKey = "active"
 const quarantineStatusActiveMessage = "success"
 
@@ -67,12 +70,24 @@ func New(s *v1alpha1.Quarantine, c kubernetes.Interface, f util.Factory, reqLogg
 				ErrOut: os.Stdout,
 			},
 			factory: f,
-			Logger:  reqLogger,
+			Logger:  reqLogger.WithValues("node", n.Name),
+			Flags: &drain.Helper{
+				IgnoreAllDaemonSets: true,
+				DisableEviction:     false,
+				DeleteEmptyDirData:  true,
+				PodSelector:         "!" + quarantinePodLabelPrefix + quarantinePodSelector,
+				Force:               false,
+				IgnoreErrors:        false,
+				Ctx:                 context.TODO(),
+				Client:              c,
+				ErrOut:              os.Stdout,
+				Out:                 os.Stdout,
+			},
 		}
 
 		temp.setNodesResources(n.Resources)
 		temp.mergeResources(s.Spec.Resources)
-		temp.parseFlags(c)
+		temp.parseFlags(s.Spec.Flags, n.Flags)
 		nodes = append(nodes, temp)
 	}
 
@@ -126,6 +141,10 @@ func (q *Quarantine) Start() error {
 		if err := n.deschedulePods(); err != nil {
 			return err
 		}
+
+		if err := n.evictPods(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -171,6 +190,13 @@ func (q *Quarantine) Stop() error {
 		for _, ds := range n.Daemonsets {
 			q.Logger.Info("remove toleration for daemonset...", "dameonset", ds.Name)
 			if err := ds.removeToleration(n.Flags.Client); err != nil {
+				return err
+			}
+		}
+
+		for _, d := range n.Deployments {
+			q.Logger.Info("remove toleration for deployment...", "deployment", d.Name)
+			if err := d.removeToleration(n.Flags.Client); err != nil {
 				return err
 			}
 		}

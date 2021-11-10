@@ -29,15 +29,16 @@ type QuarantineSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Quarantine. Edit quarantine_types.go to remove/update
 	Nodes     []Node     `json:"nodes,omitempty"`
 	Debug     Debug      `json:"debug,omitempty"`
+	Flags     Flags      `json:"flags,omitempty"`
 	Resources []Resource `json:"resources"`
 }
 
 // Node defines a configuration for node to isolate
 type Node struct {
 	Name      string     `json:"name"`
+	Flags     Flags      `json:"flags,omitempty"`
 	Isolate   bool       `json:"isolate,omitempty"`
 	Rescale   bool       `json:"rescale,omitempty"`
 	Resources []Resource `json:"resources,omitempty"`
@@ -48,11 +49,22 @@ type Resource struct {
 	Type      string `json:"type,omitempty"`
 	Name      string `json:"name,omitempty"`
 	Namespace string `json:"namespace,omitempty"`
-	Keep      bool   `json:"keep,omitempty"`
+	// +kubebuilder:default:=false
+	Keep bool `json:"keep,omitempty"`
+}
+
+// Flag defines flags for draining a node
+type Flags struct {
+	IgnoreAllDaemonSets *bool `json:"ignoreAllDaemonSets,omitempty"`
+	DisableEviction     *bool `json:"disableEviction,omitempty"`
+	DeleteEmptyDirData  *bool `json:"deleteEmptyDirData,omitempty"`
+	Force               *bool `json:"force,omitempty"`
+	IgnoreErrors        *bool `json:"ignoreErrors,omitempty"`
 }
 
 // Debug defines a debug pod configuration
 type Debug struct {
+	// +kubebuilder:default:=false
 	Enabled   bool   `json:"enabled"`
 	Image     string `json:"image,omitempty"`
 	Namespace string `json:"namespace,omitempty"`

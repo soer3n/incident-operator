@@ -13,7 +13,6 @@ func waitForResource(w watch.Interface, logger logr.Logger) {
 		e := <-w.ResultChan()
 
 		if e.Type == watch.Added || e.Type == watch.Deleted {
-			logger.Info("modified...")
 			return
 		}
 	}

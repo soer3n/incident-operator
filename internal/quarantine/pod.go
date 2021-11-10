@@ -2,10 +2,12 @@ package quarantine
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/descheduler/pkg/descheduler/evictions"
 
 	"k8s.io/client-go/kubernetes"
 )
@@ -44,22 +46,15 @@ func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName
 
 			if updateLabels {
 				labels := map[string]string{}
-
-				for k, v := range currentPod.ObjectMeta.Labels {
-					labels[k] = quarantinePodSelector
-					labels[quarantinePodLabelPrefix+k] = v
-				}
-
 				labels[quarantinePodLabelPrefix+quarantinePodLabelKey] = quarantinePodLabelValue
-
 				currentPod.ObjectMeta.Labels = labels
 			}
 
 			if addToleration {
 				currentPod.Spec.Tolerations = append(pod.Spec.Tolerations, corev1.Toleration{
-					Key:    quarantineTaintKey,
-					Value:  quarantineTaintValue,
-					Effect: quarantineTaintEffect,
+					Key:      quarantineTaintKey,
+					Operator: quarantineTaintOperator,
+					Effect:   quarantineTaintEffect,
 				})
 			}
 
@@ -70,6 +65,14 @@ func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName
 	}
 
 	return nil
+}
+
+func podIsInQuarantine(pod corev1.Pod) bool {
+	if _, ok := pod.ObjectMeta.Labels[quarantinePodLabelPrefix+quarantinePodLabelKey]; !ok {
+		return false
+	}
+
+	return true
 }
 
 func cleanupIsolatedPods(c kubernetes.Interface) error {
@@ -92,6 +95,26 @@ func cleanupIsolatedPods(c kubernetes.Interface) error {
 		if err = c.CoreV1().Pods(pod.ObjectMeta.Namespace).Delete(context.TODO(), pod.ObjectMeta.Name, deleteOpts); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func evictPod(pod corev1.Pod, c kubernetes.Interface) error {
+
+	var err error
+	var success bool
+	var excludedNodesObj []*corev1.Node
+	var node *corev1.Node
+
+	ev := evictions.NewPodEvictor(c, "", false, 1, excludedNodesObj, false, false, true)
+
+	if success, err = ev.EvictPod(context.TODO(), &pod, node, rescheduleStrategy); err != nil {
+		return err
+	}
+
+	if !success {
+		return errors.New("no success on pod eviction")
 	}
 
 	return nil

@@ -15,11 +15,17 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-var obj *v1.DaemonSet
-var patch []byte
-var err error
+const (
+	rescheduleStrategy  = "evict"
+	evictionKind        = "Eviction"
+	evictionSubresource = "pods/eviction"
+)
 
 func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
+
+	var obj *v1.DaemonSet
+	var patch []byte
+	var err error
 
 	getOpts := metav1.GetOptions{}
 
@@ -34,17 +40,20 @@ func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode
 		return err
 	}
 
-	if ds.Keep {
-		obj.Spec.Template.Spec.Tolerations = append(obj.Spec.Template.Spec.Tolerations, corev1.Toleration{
-			Key:    quarantineTaintKey,
-			Value:  quarantineTaintValue,
-			Effect: quarantineTaintEffect,
-		})
+	logger.Info("pod isolated from workload...")
 
-		patchPayload := v1.DaemonSetSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Tolerations: obj.Spec.Template.Spec.Tolerations,
+	if ds.Keep {
+
+		patchPayload := []tolerationPayload{
+			{
+				Op:   "add",
+				Path: "/spec/template/spec/tolerations",
+				Value: []tolerationValue{
+					{
+						Key:      quarantineTaintKey,
+						Operator: quarantineTaintOperator,
+						Effect:   quarantineTaintEffect,
+					},
 				},
 			},
 		}
@@ -55,25 +64,11 @@ func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode
 			return err
 		}
 
-		if _, err = c.AppsV1().DaemonSets(ds.Namespace).Patch(context.TODO(), ds.Name, types.StrategicMergePatchType, patch, patchOpts); err != nil {
+		if _, err = c.AppsV1().DaemonSets(ds.Namespace).Patch(context.TODO(), ds.Name, types.JSONPatchType, patch, patchOpts); err != nil {
 			return err
 		}
 
-		labels, _ := ds.getLabelSelectorAsString(podMatchLabels)
-		timeout := int64(20)
-		listOpts := metav1.ListOptions{
-			Watch:          true,
-			LabelSelector:  labels,
-			TimeoutSeconds: &timeout,
-		}
-
-		w, err := c.CoreV1().Pods(ds.Namespace).Watch(context.TODO(), listOpts)
-
-		if err != nil {
-			return err
-		}
-
-		waitForResource(w, logger)
+		logger.Info("modified...")
 	}
 
 	return nil
@@ -81,29 +76,21 @@ func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode
 
 func (ds Daemonset) removeToleration(c kubernetes.Interface) error {
 
-	var obj *v1.DaemonSet
+	var patch []byte
 	var err error
 
 	getOpts := metav1.GetOptions{}
 
 	// get affected daemonset
-	if obj, err = c.AppsV1().DaemonSets(ds.Namespace).Get(context.TODO(), ds.Name, getOpts); err != nil {
+	if _, err = c.AppsV1().DaemonSets(ds.Namespace).Get(context.TODO(), ds.Name, getOpts); err != nil {
 		return err
 	}
 
-	tolerations := []corev1.Toleration{}
-
-	for _, t := range obj.Spec.Template.Spec.Tolerations {
-		if t.Value != quarantineTaintValue && t.Key != quarantineTaintKey {
-			tolerations = append(tolerations, t)
-		}
-	}
-
-	patchPayload := v1.DaemonSetSpec{
-		Template: corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{
-				Tolerations: tolerations,
-			},
+	patchPayload := []tolerationPayload{
+		{
+			Op:    "replace",
+			Path:  "/spec/template/spec/tolerations",
+			Value: []tolerationValue{},
 		},
 	}
 
@@ -113,7 +100,7 @@ func (ds Daemonset) removeToleration(c kubernetes.Interface) error {
 		return err
 	}
 
-	if _, err = c.AppsV1().DaemonSets(ds.Namespace).Patch(context.TODO(), ds.Name, types.StrategicMergePatchType, patch, patchOpts); err != nil {
+	if _, err = c.AppsV1().DaemonSets(ds.Namespace).Patch(context.TODO(), ds.Name, types.JSONPatchType, patch, patchOpts); err != nil {
 		return err
 	}
 
@@ -121,6 +108,9 @@ func (ds Daemonset) removeToleration(c kubernetes.Interface) error {
 }
 
 func (ds Daemonset) isAlreadyManaged(c kubernetes.Interface, node, namespace string) (bool, error) {
+
+	var obj *v1.DaemonSet
+	var err error
 
 	getOpts := metav1.GetOptions{}
 

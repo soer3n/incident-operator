@@ -52,3 +52,23 @@ type Daemonset struct {
 	Namespace string
 	Keep      bool
 }
+
+type tolerationValue struct {
+	Key      string `json:"key"`
+	Operator string `json:"operator"`
+	Value    string `json:"value"`
+	Effect   string `json:"effect"`
+}
+
+type tolerationPayload struct {
+	Op   string `json:"op"`
+	Path string `json:"path"`
+	// tolerations are an array
+	Value []tolerationValue `json:"value"`
+}
+
+type labelPayload struct {
+	Op    string            `json:"op"`
+	Path  string            `json:"path"`
+	Value map[string]string `json:"value"`
+}

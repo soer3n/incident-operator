@@ -224,6 +224,10 @@ func getPodMock() *mocks.PodV1 {
 		FieldSelector: "spec.nodeName=bar",
 	}).Return(podListStart, nil)
 
+	p.On("List", context.Background(), metav1.ListOptions{
+		FieldSelector: "spec.nodeName=bar",
+	}).Return(podListStart, nil)
+
 	p.On("Update", context.Background(), isolatedPod, metav1.UpdateOptions{}).Return(isolatedPod, nil)
 
 	gracePeriod := int64(0)

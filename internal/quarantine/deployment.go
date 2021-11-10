@@ -2,12 +2,13 @@ package quarantine
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"k8s.io/client-go/kubernetes"
 )
@@ -15,6 +16,7 @@ import (
 func (d Deployment) isolatePod(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
 
 	var obj *v1.Deployment
+	var patch []byte
 	var err error
 
 	opts := metav1.GetOptions{}
@@ -27,18 +29,86 @@ func (d Deployment) isolatePod(c kubernetes.Interface, node string, isolatedNode
 		return err
 	}
 
+	logger.Info("pod isolated from workload...")
+
 	if d.Keep {
-		obj.Spec.Template.Spec.Tolerations = append(obj.Spec.Template.Spec.Tolerations, corev1.Toleration{
-			Key:    quarantineTaintKey,
-			Value:  quarantineTaintValue,
-			Effect: quarantineTaintEffect,
-		})
+		patchPayload := []tolerationPayload{
+			{
+				Op:   "add",
+				Path: "/spec/template/spec/tolerations",
+				Value: []tolerationValue{
+					{
+						Key:      quarantineTaintKey,
+						Operator: quarantineTaintOperator,
+						Effect:   quarantineTaintEffect,
+					},
+				},
+			},
+		}
 
-		updateOpts := metav1.UpdateOptions{}
+		patchOpts := metav1.PatchOptions{}
 
-		if _, err = c.AppsV1().Deployments(d.Namespace).Update(context.Background(), obj, updateOpts); err != nil {
+		if patch, err = json.Marshal(patchPayload); err != nil {
 			return err
 		}
+
+		if _, err = c.AppsV1().Deployments(d.Namespace).Patch(context.TODO(), d.Name, types.JSONPatchType, patch, patchOpts); err != nil {
+			return err
+		}
+
+		logger.Info("modified...")
+
+	}
+
+	return nil
+}
+
+func (d Deployment) removeToleration(c kubernetes.Interface) error {
+
+	var patch []byte
+	var err error
+
+	getOpts := metav1.GetOptions{}
+
+	// get affected daemonset
+	if _, err = c.AppsV1().Deployments(d.Namespace).Get(context.TODO(), d.Name, getOpts); err != nil {
+		return err
+	}
+
+	patchPayload := []tolerationPayload{
+		{
+			Op:    "replace",
+			Path:  "/spec/template/spec/tolerations",
+			Value: []tolerationValue{},
+		},
+	}
+
+	patchOpts := metav1.PatchOptions{}
+
+	if patch, err = json.Marshal(patchPayload); err != nil {
+		return err
+	}
+
+	if _, err = c.AppsV1().Deployments(d.Namespace).Patch(context.TODO(), d.Name, types.JSONPatchType, patch, patchOpts); err != nil {
+		return err
+	}
+
+	patchLabelPayload := []labelPayload{
+		{
+			Op:   "add",
+			Path: "/metadata/labels",
+			Value: map[string]string{
+				quarantinePodLabelPrefix + quarantinePodLabelKey: quarantinePodLabelValue,
+			},
+		},
+	}
+
+	if patch, err = json.Marshal(patchLabelPayload); err != nil {
+		return err
+	}
+
+	if _, err = c.AppsV1().Deployments(d.Namespace).Patch(context.TODO(), d.Name, types.JSONPatchType, patch, patchOpts); err != nil {
+		return err
 	}
 
 	return nil

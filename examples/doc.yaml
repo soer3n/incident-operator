@@ -6,11 +6,26 @@ spec:
   debug:
     enabled: true
     image: nicolaka/netshoot
+  flags:
+    disableEviction: false
+    deleteEmptyDirData: true
+    force: false
+    ignoreErrors: false
   nodes:
-  - name: mngt-mngt-pool-f47cdbdfc-2mxtb
+  - name: mngt-mngt-pool-f47cdbdfc-5gmpq
     isolate: true # add taint to node
-  - name: mngt-mngt-pool-f47cdbdfc-r792b
-    isolate: true # add taint to node
+    flags:
+      force: true
+      ignoreAllDaemonSets: true
+    resources:
+    - type: deployment
+      name: keycloak-operator
+      namespace: keycloak
+      keep: false
+    - type: deployment
+      name: kp-operator
+      namespace: monitoring
+      keep: true
   resources:
   - type: daemonset
     name: loki-stack-promtail

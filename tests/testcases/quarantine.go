@@ -15,6 +15,8 @@ import (
 )
 
 func GetQuarantineInitSpec() []tests.QuarantineInitTestCase {
+	trueBool := true
+	falseBool := false
 	return []tests.QuarantineInitTestCase{
 		{
 			ReturnError: nil,
@@ -23,6 +25,13 @@ func GetQuarantineInitSpec() []tests.QuarantineInitTestCase {
 					Debug: v1alpha1.Debug{
 						Image:     "foo:bar",
 						Namespace: "test",
+					},
+					Flags: v1alpha1.Flags{
+						IgnoreAllDaemonSets: &falseBool,
+						IgnoreErrors:        &falseBool,
+						DeleteEmptyDirData:  &trueBool,
+						Force:               &falseBool,
+						DisableEviction:     &falseBool,
 					},
 					Nodes: []v1alpha1.Node{
 						{
@@ -95,6 +104,13 @@ func GetQuarantineInitSpec() []tests.QuarantineInitTestCase {
 					Debug: v1alpha1.Debug{
 						Image:     "foo:bar",
 						Namespace: "test",
+					},
+					Flags: v1alpha1.Flags{
+						IgnoreAllDaemonSets: &falseBool,
+						IgnoreErrors:        &falseBool,
+						DeleteEmptyDirData:  &trueBool,
+						Force:               &falseBool,
+						DisableEviction:     &falseBool,
 					},
 					Nodes: []v1alpha1.Node{
 						{

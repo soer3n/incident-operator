@@ -40,6 +40,7 @@ spec:
                 description: Debug defines a debug pod configuration
                 properties:
                   enabled:
+                    default: false
                     type: boolean
                   image:
                     type: string
@@ -48,12 +49,38 @@ spec:
                 required:
                 - enabled
                 type: object
+              flags:
+                description: Flag defines flags for draining a node
+                properties:
+                  deleteEmptyDirData:
+                    type: boolean
+                  disableEviction:
+                    type: boolean
+                  force:
+                    type: boolean
+                  ignoreAllDaemonSets:
+                    type: boolean
+                  ignoreErrors:
+                    type: boolean
+                type: object
               nodes:
-                description: Foo is an example field of Quarantine. Edit quarantine_types.go
-                  to remove/update
                 items:
                   description: Node defines a configuration for node to isolate
                   properties:
+                    flags:
+                      description: Flag defines flags for draining a node
+                      properties:
+                        deleteEmptyDirData:
+                          type: boolean
+                        disableEviction:
+                          type: boolean
+                        force:
+                          type: boolean
+                        ignoreAllDaemonSets:
+                          type: boolean
+                        ignoreErrors:
+                          type: boolean
+                      type: object
                     isolate:
                       type: boolean
                     name:
@@ -65,6 +92,7 @@ spec:
                         description: Resource defines a workload to isolate on a node
                         properties:
                           keep:
+                            default: false
                             type: boolean
                           name:
                             type: string
@@ -83,6 +111,7 @@ spec:
                   description: Resource defines a workload to isolate on a node
                   properties:
                     keep:
+                      default: false
                       type: boolean
                     name:
                       type: string
