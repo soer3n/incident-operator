@@ -16,9 +16,7 @@ import (
 )
 
 const (
-	rescheduleStrategy  = "evict"
-	evictionKind        = "Eviction"
-	evictionSubresource = "pods/eviction"
+	rescheduleStrategy = "evict"
 )
 
 func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
