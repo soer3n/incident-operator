@@ -11,6 +11,13 @@ import (
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+// Nodes represents mock func for similar runtime client func
+func (c *CoreV1) Nodes() corev1.NodeInterface {
+	args := c.Called()
+	v := args.Get(0)
+	return v.(corev1.NodeInterface)
+}
+
 // Pods represents mock func for similar runtime client func
 func (c *CoreV1) Pods(namespace string) corev1.PodInterface {
 	args := c.Called(namespace)

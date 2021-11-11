@@ -67,7 +67,7 @@ func (n *Node) evictPods() error {
 	}
 
 	for _, pod := range pods.Items {
-		if pod.Spec.PriorityClassName != "system-node-critical" && !podIsInQuarantine(pod) {
+		if pod.Spec.PriorityClassName != "system-node-critical" && !podIsInQuarantine(pod) && n.Isolate {
 			if err := evictPod(pod, n.Flags.Client); err != nil {
 				return err
 			}
@@ -182,7 +182,16 @@ func (n *Node) mergeResources(rs []v1alpha1.Resource) {
 
 func (n *Node) parseFlags(baseFlags, nodeFlags v1alpha1.Flags) {
 
-	flags := v1alpha1.Flags{}
+	falseFlag := false
+	trueFlag := true
+
+	flags := v1alpha1.Flags{
+		DeleteEmptyDirData:  &trueFlag,
+		DisableEviction:     &falseFlag,
+		Force:               &falseFlag,
+		IgnoreAllDaemonSets: &falseFlag,
+		IgnoreErrors:        &falseFlag,
+	}
 
 	flags = n.mergeFlags(flags, baseFlags)
 	flags = n.mergeFlags(flags, nodeFlags)
@@ -360,7 +369,13 @@ func (n Node) waitForUpdate() error {
 		LabelSelector:  "kubernetes.io/hostname=" + n.Name,
 		TimeoutSeconds: &timeout,
 	}
-	w, err := n.Flags.Client.CoreV1().Nodes().Watch(context.TODO(), listOpts)
+
+	apps := n.Flags.Client.AppsV1()
+	_ = apps.Deployments("")
+
+	core := n.Flags.Client.CoreV1()
+	node := core.Nodes()
+	w, err := node.Watch(context.TODO(), listOpts)
 
 	if err != nil {
 		return err

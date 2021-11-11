@@ -15,4 +15,8 @@ You can configure if da debug pod is deployed on affected nodes. It's also possi
 There are configuration options per node. This contains workload which pods should be isolated or not rescheduled, using a specific debug pod for a node and adding taint to a node. Workloads which are configured to be isolated are merged with configured resources under .spec.resources.
 ### resources
 
-This is a list of workloads whose pods should be isolated on each affected node configured under .spec.nodes and is merged with node specific configurations.
+This is a list of workloads whose pods should be isolated on each affected node configured under .spec.nodes[$key].resources and is merged with node specific configurations.
+
+### flags
+
+This is a map of flag settings for draining a node. It can be configured global or per node under .spec.nodes[$key].flags and is merged with node specific configuration.

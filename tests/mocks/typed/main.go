@@ -5,7 +5,7 @@ import (
 	"k8s.io/client-go/discovery"
 	appsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/kubernetes/typed/policy/v1beta1"
+	policyv1beta1 "k8s.io/client-go/kubernetes/typed/policy/v1beta1"
 )
 
 // CoreV1 represents mock func for similar runtime client func
@@ -22,11 +22,11 @@ func (client *Client) AppsV1() appsv1.AppsV1Interface {
 	return v.(appsv1.AppsV1Interface)
 }
 
-// PolicyV1Beta1 represents mock func for similar runtime client func
-func (client *Client) PolicyV1Beta1() v1beta1.PolicyV1beta1Interface {
+// AppsV1 represents mock func for similar runtime client func
+func (client *Client) PolicyV1beta1() policyv1beta1.PolicyV1beta1Interface {
 	args := client.Called()
 	v := args.Get(0)
-	return v.(v1beta1.PolicyV1beta1Interface)
+	return v.(policyv1beta1.PolicyV1beta1Interface)
 }
 
 // Discovery represents mock func for similar runtime client func

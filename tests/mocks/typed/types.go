@@ -33,6 +33,7 @@ type AppsV1 struct {
 	appsv1.AppsV1Interface
 }
 
+// PolicyV1Beta1 represents mock struct for k8s runtime client policy v1beta1 api resources
 type PolicyV1Beta1 struct {
 	mock.Mock
 	policyv1beta1.PolicyV1beta1Interface
