@@ -18,24 +18,14 @@ func (n Node) prepare() error {
 
 	for _, ds := range n.Daemonsets {
 
-		ok, err := ds.isAlreadyManaged(n.Flags.Client, n.Name, ds.Namespace)
-
-		if err != nil {
-			return err
-		}
-
-		if ok {
-			continue
-		}
-
-		if err := ds.isolatePod(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("daemonset", ds.Name)); err != nil {
+		if err := ds.prepare(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("daemonset", ds.Name)); err != nil {
 			return err
 		}
 	}
 
 	for _, d := range n.Deployments {
 
-		if err := d.isolatePod(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("deployment", d.Name)); err != nil {
+		if err := d.prepare(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("deployment", d.Name)); err != nil {
 			return err
 		}
 	}
@@ -104,6 +94,10 @@ func (n *Node) update() error {
 		}
 	}
 
+	return nil
+}
+
+func (n Node) remove() error {
 	return nil
 }
 

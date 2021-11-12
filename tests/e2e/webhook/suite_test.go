@@ -63,7 +63,8 @@ var ctx context.Context
 var cancel context.CancelFunc
 
 const quarantineWebhookPort = 33633
-const quarantineWebhookPath = "/validate"
+const quarantineWebhookValidatePath = "/validate"
+const quarantineWebhookMutatePath = "/mutate"
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -150,9 +151,9 @@ func randStringRunes(n int) string {
 
 func initWebhookConfig() {
 	failedTypeV1 := admissionregv1.Fail
-	path := "https://127.0.0.1:" + fmt.Sprint(quarantineWebhookPort) + quarantineWebhookPath
+	validatePath := "https://127.0.0.1:" + fmt.Sprint(quarantineWebhookPort) + quarantineWebhookValidatePath
 	//webhookCA, _ := os.ReadFile(quarantineWebhookCertDir + "ca.crt")
-	webhookObj := &admissionregv1.ValidatingWebhookConfiguration{
+	webhookValidateObj := &admissionregv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test",
 		},
@@ -164,7 +165,7 @@ func initWebhookConfig() {
 			{
 				Name: "webhook.test.svc",
 				ClientConfig: admissionregv1.WebhookClientConfig{
-					URL: &path,
+					URL: &validatePath,
 				},
 				FailurePolicy: &failedTypeV1,
 				Rules: []admissionregv1.RuleWithOperations{
@@ -180,9 +181,40 @@ func initWebhookConfig() {
 			},
 		},
 	}
+
+	mutatePath := "https://127.0.0.1:" + fmt.Sprint(quarantineWebhookPort) + quarantineWebhookMutatePath
+	webhookMutateObj := &admissionregv1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "MutatingWebhookConfiguration",
+			APIVersion: "admissionregistration.k8s.io/v1beta1",
+		},
+		Webhooks: []admissionregv1.MutatingWebhook{
+			{
+				Name: "webhook.test.svc",
+				ClientConfig: admissionregv1.WebhookClientConfig{
+					URL: &mutatePath,
+				},
+				FailurePolicy: &failedTypeV1,
+				Rules: []admissionregv1.RuleWithOperations{
+					{
+						Operations: []admissionregv1.OperationType{"UPDATE"},
+						Rule: admissionregv1.Rule{
+							APIGroups:   []string{"ops.soer3n.info"},
+							APIVersions: []string{"v1alpha1"},
+							Resources:   []string{"quarantines"},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	testEnv.WebhookInstallOptions = envtest.WebhookInstallOptions{
 		ValidatingWebhooks: []client.Object{
-			webhookObj,
+			webhookValidateObj, webhookMutateObj,
 		},
 	}
 }
@@ -208,14 +240,24 @@ func startWebhookServer() context.CancelFunc {
 	server := m.GetWebhookServer()
 	dec, _ := admission.NewDecoder(scheme)
 
-	q := &quarantine.QuarantineHandler{
+	qv := &quarantine.QuarantineValidateHandler{
+		Client:  getFakeClient(),
+		Decoder: dec,
+		Log:     logf.Log,
+	}
+
+	qm := &quarantine.QuarantineMutateHandler{
 		Client:  getFakeClient(),
 		Decoder: dec,
 		Log:     logf.Log,
 	}
 
 	server.Register("/validate", &admission.Webhook{
-		Handler: q,
+		Handler: qv,
+	})
+
+	server.Register("/mutate", &admission.Webhook{
+		Handler: qm,
 	})
 
 	Expect(err).NotTo(HaveOccurred())

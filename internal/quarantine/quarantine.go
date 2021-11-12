@@ -107,7 +107,7 @@ func (q *Quarantine) Prepare() error {
 
 		q.Logger.Info("preparing node...", "node", n.Name)
 
-		if q.Debug.Enabled {
+		if q.Debug.Enabled || n.Debug.Enabled {
 			q.Logger.Info("deploying debug pod...", "node", n.Name)
 			if err := q.Debug.deploy(n.Flags.Client, n.Name); err != nil {
 				return err
@@ -178,7 +178,7 @@ func (q *Quarantine) Stop() error {
 
 	for _, n := range q.Nodes {
 
-		if q.Debug.Enabled {
+		if q.Debug.Enabled || n.Debug.Enabled {
 			q.Logger.Info("remove debug pods...")
 			q.Debug.remove(q.Nodes[0].Flags.Client, n.Name, q.Logger)
 		}

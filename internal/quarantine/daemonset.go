@@ -3,6 +3,7 @@ package quarantine
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -18,6 +19,35 @@ import (
 const (
 	rescheduleStrategy = "evict"
 )
+
+func (ds Daemonset) prepare(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
+
+	if ds.Keep {
+
+		ok, err := ds.isAlreadyManaged(c, node, ds.Namespace)
+
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			return errors.New("something went wrong on daemonset " + ds.Name)
+		}
+	}
+
+	if ok, err := ds.isAlreadyIsolated(c, node, ds.Namespace); !ok {
+
+		if err != nil {
+			return err
+		}
+
+		if err := ds.isolatePod(c, node, isolatedNode, logger); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func (ds Daemonset) isolatePod(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
 
@@ -103,6 +133,30 @@ func (ds Daemonset) removeToleration(c kubernetes.Interface) error {
 	}
 
 	return nil
+}
+
+func (ds Daemonset) isAlreadyIsolated(c kubernetes.Interface, node, namespace string) (bool, error) {
+
+	var podList *corev1.PodList
+	var err error
+
+	core := c.CoreV1()
+
+	listOpts := metav1.ListOptions{
+		LabelSelector: quarantinePodLabelPrefix + quarantinePodLabelKey + "=" + quarantinePodLabelValue,
+	}
+
+	if podList, err = core.Pods(namespace).List(context.TODO(), listOpts); err != nil {
+		return false, err
+	}
+
+	for _, pod := range podList.Items {
+		if pod.ObjectMeta.Namespace == namespace && strings.Contains(pod.ObjectMeta.Name, ds.Name) {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func (ds Daemonset) isAlreadyManaged(c kubernetes.Interface, node, namespace string) (bool, error) {

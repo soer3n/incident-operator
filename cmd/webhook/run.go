@@ -56,7 +56,12 @@ func Run(certDir, metricsAddr, probeAddr string, enableLeaderElection bool) {
 
 	wh := mgr.GetWebhookServer()
 	wh.CertDir = certDir
-	wh.Register("/validate", &admission.Webhook{Handler: &quarantine.QuarantineHandler{
+	wh.Register("/validate", &admission.Webhook{Handler: &quarantine.QuarantineValidateHandler{
+		Client:  mgr.GetClient(),
+		Decoder: dec,
+		Log:     ctrl.Log.WithName("webhook").WithName("ops").WithName("Quarantine"),
+	}})
+	wh.Register("/mutate", &admission.Webhook{Handler: &quarantine.QuarantineMutateHandler{
 		Client:  mgr.GetClient(),
 		Decoder: dec,
 		Log:     ctrl.Log.WithName("webhook").WithName("ops").WithName("Quarantine"),

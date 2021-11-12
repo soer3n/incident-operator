@@ -3,15 +3,47 @@ package quarantine
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 
 	"github.com/go-logr/logr"
+
 	v1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	"k8s.io/client-go/kubernetes"
 )
+
+func (d Deployment) prepare(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
+
+	if d.Keep {
+
+		ok, err := d.isAlreadyManaged(c, node, d.Namespace)
+
+		if err != nil {
+			return err
+		}
+
+		if !ok {
+			return errors.New("something went wrong on deployment " + d.Name)
+		}
+	}
+
+	if ok, err := d.isAlreadyIsolated(c, node, d.Namespace); !ok {
+
+		if err != nil {
+			return err
+		}
+
+		if err := d.isolatePod(c, node, isolatedNode, logger); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 
 func (d Deployment) isolatePod(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
 
@@ -112,6 +144,30 @@ func (d Deployment) removeToleration(c kubernetes.Interface) error {
 	}
 
 	return nil
+}
+
+func (d Deployment) isAlreadyIsolated(c kubernetes.Interface, node, namespace string) (bool, error) {
+
+	var podList *corev1.PodList
+	var err error
+
+	core := c.CoreV1()
+
+	listOpts := metav1.ListOptions{
+		LabelSelector: quarantinePodLabelPrefix + quarantinePodLabelKey + "=" + quarantinePodLabelValue,
+	}
+
+	if podList, err = core.Pods(namespace).List(context.TODO(), listOpts); err != nil {
+		return false, err
+	}
+
+	for _, pod := range podList.Items {
+		if pod.ObjectMeta.Namespace == namespace && strings.Contains(pod.ObjectMeta.Name, d.Name) {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func (d Deployment) isAlreadyManaged(c kubernetes.Interface, node, namespace string) (bool, error) {
