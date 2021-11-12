@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 
 	"github.com/go-logr/logr"
 
@@ -54,38 +55,8 @@ func New(s *v1alpha1.Quarantine, c kubernetes.Interface, f util.Factory, reqLogg
 	nodes := []*Node{}
 
 	for _, n := range s.Spec.Nodes {
-		temp := &Node{
-			Name:        n.Name,
-			Daemonsets:  []Daemonset{},
-			Deployments: []Deployment{},
-			Debug: Debug{
-				Enabled:   s.Spec.Debug.Enabled,
-				Image:     debugImage,
-				Namespace: debugNamespace,
-			},
-			Isolate: n.Isolate,
-			IOStreams: genericclioptions.IOStreams{
-				In:     os.Stdin,
-				Out:    os.Stdout,
-				ErrOut: os.Stdout,
-			},
-			factory: f,
-			Logger:  reqLogger.WithValues("node", n.Name),
-			Flags: &drain.Helper{
-				IgnoreAllDaemonSets: true,
-				DisableEviction:     false,
-				DeleteEmptyDirData:  true,
-				PodSelector:         "!" + quarantinePodLabelPrefix + quarantinePodSelector,
-				Force:               false,
-				IgnoreErrors:        false,
-				Ctx:                 context.TODO(),
-				Client:              c,
-				ErrOut:              os.Stdout,
-				Out:                 os.Stdout,
-			},
-		}
-
-		temp.setNodesResources(n.Resources)
+		temp := q.getNodeStruct(n.Name, debugImage, debugNamespace, n.Isolate, f)
+		temp.setNodeResources(n.Resources)
 		temp.mergeResources(s.Spec.Resources)
 		temp.parseFlags(s.Spec.Flags, n.Flags)
 		nodes = append(nodes, temp)
@@ -93,11 +64,58 @@ func New(s *v1alpha1.Quarantine, c kubernetes.Interface, f util.Factory, reqLogg
 
 	q.Nodes = nodes
 
+	nodesToRemove := []string{}
+	nodesToRemoveObj := []*Node{}
+
+	if _, ok := s.ObjectMeta.Annotations[quarantinePodLabelPrefix+quarantineNodeRemoveLabel]; ok {
+		nodesToRemove = strings.Split(s.ObjectMeta.Annotations[quarantinePodLabelPrefix+quarantineNodeRemoveLabel], ",")
+	}
+
+	for _, r := range nodesToRemove {
+		temp := q.getNodeStruct(r, debugImage, debugNamespace, false, f)
+		nodesToRemoveObj = append(nodesToRemoveObj, temp)
+	}
+
+	q.MarkedNodes = nodesToRemoveObj
+
 	if len(s.Status.Conditions) > 0 {
 		q.isActive = true
 	}
 
 	return q, nil
+}
+
+func (q Quarantine) getNodeStruct(name, debugImage, debugNamespace string, isolate bool, f util.Factory) *Node {
+	return &Node{
+		Name:        name,
+		Daemonsets:  []Daemonset{},
+		Deployments: []Deployment{},
+		Debug: Debug{
+			Enabled:   q.Debug.Enabled,
+			Image:     debugImage,
+			Namespace: debugNamespace,
+		},
+		Isolate: isolate,
+		IOStreams: genericclioptions.IOStreams{
+			In:     os.Stdin,
+			Out:    os.Stdout,
+			ErrOut: os.Stdout,
+		},
+		factory: f,
+		Logger:  q.Logger.WithValues("node", name),
+		Flags: &drain.Helper{
+			IgnoreAllDaemonSets: true,
+			DisableEviction:     false,
+			DeleteEmptyDirData:  true,
+			PodSelector:         "!" + quarantinePodLabelPrefix + quarantinePodSelector,
+			Force:               false,
+			IgnoreErrors:        false,
+			Ctx:                 context.TODO(),
+			Client:              q.Client,
+			ErrOut:              os.Stdout,
+			Out:                 os.Stdout,
+		},
+	}
 }
 
 // Prepare represents the tasks before a quarantine can be started
@@ -154,6 +172,17 @@ func (q *Quarantine) Start() error {
 // Update represents the tasks which are not yet executed
 func (q *Quarantine) Update() error {
 
+	for _, n := range q.MarkedNodes {
+		if q.Debug.Enabled || n.Debug.Enabled {
+			q.Logger.Info("remove debug pods...")
+			q.Debug.remove(q.Client, n.Name, q.Logger)
+		}
+
+		if err := n.remove(); err != nil {
+			return err
+		}
+	}
+
 	// limit update to fix failed reconciles
 	if meta.IsStatusConditionPresentAndEqual(q.Conditions, quarantineStatusActiveKey, metav1.ConditionTrue) &&
 		q.Conditions[0].Message == quarantineStatusActiveMessage {
@@ -180,11 +209,10 @@ func (q *Quarantine) Stop() error {
 
 		if q.Debug.Enabled || n.Debug.Enabled {
 			q.Logger.Info("remove debug pods...")
-			q.Debug.remove(q.Nodes[0].Flags.Client, n.Name, q.Logger)
+			q.Debug.remove(q.Client, n.Name, q.Logger)
 		}
 
-		q.Logger.Info("remove taint...", "node", n.Name)
-		if err := n.removeTaint(); err != nil {
+		if err := n.remove(); err != nil {
 			return err
 		}
 
@@ -201,15 +229,10 @@ func (q *Quarantine) Stop() error {
 				return err
 			}
 		}
-
-		q.Logger.Info("enable scheduling again...", "node", n.Name)
-		if err := n.enableScheduling(); err != nil {
-			return err
-		}
 	}
 
 	q.Logger.Info("clean up isolated pods...")
-	if err := cleanupIsolatedPods(q.Nodes[0].Flags.Client); err != nil {
+	if err := cleanupIsolatedPods(q.Client); err != nil {
 		return err
 	}
 

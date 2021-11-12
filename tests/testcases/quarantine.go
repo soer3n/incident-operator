@@ -454,6 +454,7 @@ func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 				Debug: q.Debug{
 					Enabled: true,
 				},
+				Client:     fakeClientset,
 				Conditions: []metav1.Condition{},
 			},
 		},

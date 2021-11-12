@@ -14,6 +14,7 @@ import (
 
 const quarantinePodLabelPrefix = "ops.soer3n.info/"
 const quarantinePodLabelKey = "quarantine"
+const quarantineNodeRemoveLabel = "revert"
 const quarantinePodLabelValue = "true"
 
 func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName, namespace string, updateLabels, addToleration bool) error {
@@ -67,12 +68,12 @@ func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName
 	return nil
 }
 
-func podIsInQuarantine(pod corev1.Pod) bool {
+func podIsNotInQuarantine(pod corev1.Pod) bool {
 	if _, ok := pod.ObjectMeta.Labels[quarantinePodLabelPrefix+quarantinePodLabelKey]; !ok {
-		return false
+		return true
 	}
 
-	return true
+	return false
 }
 
 func cleanupIsolatedPods(c kubernetes.Interface) error {

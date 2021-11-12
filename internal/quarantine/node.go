@@ -57,7 +57,7 @@ func (n *Node) evictPods() error {
 	}
 
 	for _, pod := range pods.Items {
-		if pod.Spec.PriorityClassName != "system-node-critical" && !podIsInQuarantine(pod) && n.Isolate {
+		if pod.Spec.PriorityClassName != "system-node-critical" && podIsNotInQuarantine(pod) && n.Isolate {
 			if err := evictPod(pod, n.Flags.Client); err != nil {
 				return err
 			}
@@ -98,10 +98,21 @@ func (n *Node) update() error {
 }
 
 func (n Node) remove() error {
+
+	n.Logger.Info("remove taint...")
+	if err := n.removeTaint(); err != nil {
+		return err
+	}
+
+	n.Logger.Info("enable scheduling again...")
+	if err := n.enableScheduling(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (n *Node) setNodesResources(rs []v1alpha1.Resource) {
+func (n *Node) setNodeResources(rs []v1alpha1.Resource) {
 
 	for _, r := range rs {
 		switch t := r.Type; t {

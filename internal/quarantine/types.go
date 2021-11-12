@@ -11,12 +11,13 @@ import (
 
 // Quarantine represents current state of isolation
 type Quarantine struct {
-	Nodes      []*Node
-	Debug      Debug
-	Client     kubernetes.Interface
-	isActive   bool
-	Conditions []metav1.Condition
-	Logger     logr.Logger
+	Nodes       []*Node
+	MarkedNodes []*Node
+	Debug       Debug
+	Client      kubernetes.Interface
+	isActive    bool
+	Conditions  []metav1.Condition
+	Logger      logr.Logger
 }
 
 // Node represents configuration for isolating a node
