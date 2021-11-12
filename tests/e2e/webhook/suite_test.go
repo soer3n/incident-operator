@@ -214,7 +214,10 @@ func initWebhookConfig() {
 
 	testEnv.WebhookInstallOptions = envtest.WebhookInstallOptions{
 		ValidatingWebhooks: []client.Object{
-			webhookValidateObj, webhookMutateObj,
+			webhookValidateObj,
+		},
+		MutatingWebhooks: []client.Object{
+			webhookMutateObj,
 		},
 	}
 }
