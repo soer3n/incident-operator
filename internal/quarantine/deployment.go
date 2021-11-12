@@ -16,7 +16,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func (d Deployment) prepare(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
+func (d Deployment) manageWorkload(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
 
 	if d.Keep {
 

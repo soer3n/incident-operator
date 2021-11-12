@@ -20,7 +20,7 @@ const (
 	rescheduleStrategy = "evict"
 )
 
-func (ds Daemonset) prepare(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
+func (ds Daemonset) manageWorkload(c kubernetes.Interface, node string, isolatedNode bool, logger logr.Logger) error {
 
 	if ds.Keep {
 

@@ -120,7 +120,7 @@ func (q *Quarantine) Prepare() error {
 			}
 
 			q.Logger.Info("updating node...", "node", n.Name)
-			if err := n.prepare(); err != nil {
+			if err := n.manageWorkloads(); err != nil {
 				return err
 			}
 			continue

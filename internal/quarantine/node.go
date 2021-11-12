@@ -14,18 +14,18 @@ import (
 const dsType = "daemonset"
 const deploymentType = "deployment"
 
-func (n Node) prepare() error {
+func (n Node) manageWorkloads() error {
 
 	for _, ds := range n.Daemonsets {
 
-		if err := ds.prepare(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("daemonset", ds.Name)); err != nil {
+		if err := ds.manageWorkload(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("daemonset", ds.Name)); err != nil {
 			return err
 		}
 	}
 
 	for _, d := range n.Deployments {
 
-		if err := d.prepare(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("deployment", d.Name)); err != nil {
+		if err := d.manageWorkload(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("deployment", d.Name)); err != nil {
 			return err
 		}
 	}
@@ -76,7 +76,7 @@ func (n *Node) update() error {
 		return err
 	}
 
-	if err := n.prepare(); err != nil {
+	if err := n.manageWorkloads(); err != nil {
 		return err
 	}
 
