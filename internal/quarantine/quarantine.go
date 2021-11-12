@@ -142,6 +142,7 @@ func (q *Quarantine) Start() error {
 			return err
 		}
 
+		n.Logger.Info("evict daemonset pods...", "node", n.Name)
 		if err := n.evictPods(); err != nil {
 			return err
 		}

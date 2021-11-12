@@ -79,33 +79,28 @@ func (n *Node) evictPods() error {
 
 func (n *Node) update() error {
 
-	for _, ds := range n.Daemonsets {
+	ok, err := n.isAlreadyIsolated()
 
-		ok, err := ds.isAlreadyManaged(n.Flags.Client, n.Name, ds.Namespace)
-
-		if err != nil {
-			return err
-		}
-
-		if !ok {
-			if err := ds.isolatePod(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("daemonset", ds.Name)); err != nil {
-				return err
-			}
-		}
+	if err != nil {
+		n.Logger.Info(err.Error())
+		return err
 	}
 
-	for _, d := range n.Deployments {
+	if err := n.prepare(); err != nil {
+		return err
+	}
 
-		ok, err := d.isAlreadyManaged(n.Flags.Client, n.Name, d.Namespace)
+	if !ok {
+		n.Logger.Info("node not isolated...")
 
-		if err != nil {
+		n.Logger.Info("deschedule pods...")
+		if err := n.deschedulePods(); err != nil {
 			return err
 		}
 
-		if !ok {
-			if err := d.isolatePod(n.Flags.Client, n.Name, n.Isolate, n.Logger.WithValues("deployment", d.Name)); err != nil {
-				return err
-			}
+		n.Logger.Info("evict daemonset pods...")
+		if err := n.evictPods(); err != nil {
+			return err
 		}
 	}
 
@@ -373,9 +368,7 @@ func (n Node) waitForUpdate() error {
 	apps := n.Flags.Client.AppsV1()
 	_ = apps.Deployments("")
 
-	core := n.Flags.Client.CoreV1()
-	node := core.Nodes()
-	w, err := node.Watch(context.TODO(), listOpts)
+	w, err := n.Flags.Client.CoreV1().Nodes().Watch(context.TODO(), listOpts)
 
 	if err != nil {
 		return err
