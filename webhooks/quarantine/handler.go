@@ -32,10 +32,6 @@ func (h *QuarantineValidateHandler) Handle(ctx context.Context, req admission.Re
 	switch t := req.Operation; t {
 	case admissionv1.Create:
 		err = h.ValidateCreate()
-	case admissionv1.Update:
-		err = h.ValidateUpdate(req.OldObject.Object)
-	case admissionv1.Delete:
-		err = h.ValidateDelete()
 	}
 
 	if err != nil {
@@ -52,11 +48,16 @@ func (h *QuarantineMutateHandler) Handle(ctx context.Context, req admission.Requ
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
+	switch t := req.Operation; t {
+	case admissionv1.Update:
+		err = h.MutateUpdate(obj)
+	}
+
 	if err != nil {
 		return admission.Denied(err.Error())
 	}
 
-	return admission.Allowed("controller is on a valid node")
+	return admission.Allowed("quarantine resource successfully validated")
 }
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
@@ -78,19 +79,11 @@ func (h *QuarantineValidateHandler) ValidateCreate() error {
 	return nil
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (h *QuarantineValidateHandler) ValidateUpdate(old runtime.Object) error {
+// MutateUpdate implements webhook.Validator so a webhook will be registered for the type
+func (h *QuarantineMutateHandler) MutateUpdate(old runtime.Object) error {
 	h.Log.Info("validate update", "name", obj.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
-	return nil
-}
-
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (h *QuarantineValidateHandler) ValidateDelete() error {
-	h.Log.Info("validate delete", "name", obj.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }
 
