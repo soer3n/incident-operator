@@ -9,6 +9,16 @@
             "type": "go",
             "request": "launch",
             "mode": "test",
+            "program": "${workspaceFolder}/tests/e2e/controller",
+            "env": {
+                "ACK_GINKGO_DEPRECATIONS": "1.16.4"
+            }
+        },
+        {
+            "name": "Test webhooks",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
             "program": "${workspaceFolder}/tests/e2e/webhook",
             "env": {
                 "ACK_GINKGO_DEPRECATIONS": "1.16.4"

@@ -170,7 +170,7 @@ func initWebhookConfig() {
 				FailurePolicy: &failedTypeV1,
 				Rules: []admissionregv1.RuleWithOperations{
 					{
-						Operations: []admissionregv1.OperationType{"CREATE"},
+						Operations: []admissionregv1.OperationType{"CREATE", "UPDATE"},
 						Rule: admissionregv1.Rule{
 							APIGroups:   []string{"ops.soer3n.info"},
 							APIVersions: []string{"v1alpha1"},

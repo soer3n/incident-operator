@@ -2,6 +2,7 @@ package quarantine
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -31,7 +32,9 @@ func (h *QuarantineValidateHandler) Handle(ctx context.Context, req admission.Re
 
 	switch t := req.Operation; t {
 	case admissionv1.Create:
-		err = h.ValidateCreate()
+		err = h.Validate()
+	case admissionv1.Update:
+		err = h.Validate()
 	}
 
 	if err != nil {
@@ -57,11 +60,12 @@ func (h *QuarantineMutateHandler) Handle(ctx context.Context, req admission.Requ
 		return admission.Denied(err.Error())
 	}
 
-	return admission.Allowed("quarantine resource successfully validated")
+	rawObj, _ := json.Marshal(obj)
+	return admission.PatchResponseFromRaw(rawObj, rawObj)
 }
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (h *QuarantineValidateHandler) ValidateCreate() error {
+// Validate implements webhook.Validator so a webhook will be registered for the type
+func (h *QuarantineValidateHandler) Validate() error {
 	h.Log.Info("validate create", "name", obj.Name)
 
 	if pod, err = h.getControllerPod(); err != nil {
