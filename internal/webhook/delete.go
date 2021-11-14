@@ -2,6 +2,7 @@ package webhook
 
 import (
 	"context"
+	"errors"
 	"log"
 
 	"github.com/soer3n/yaho/pkg/client"
@@ -17,35 +18,28 @@ func DeleteWebhook(namespace string) error {
 
 	log.Print("deleting secrets...")
 
-	getOpts := metav1.GetOptions{}
-	_, err = c.CoreV1().Secrets(namespace).Get(context.TODO(), "incident-webhook", getOpts)
-
-	if err != nil {
-		return err
-	}
-
 	delOpts := metav1.DeleteOptions{}
-	err = c.CoreV1().Secrets(namespace).Delete(context.TODO(), "incident-webhook", delOpts)
 
-	if err != nil {
-		return err
+	if err = c.CoreV1().Secrets(namespace).Delete(context.TODO(), "incident-webhook", delOpts); err != nil {
+		log.Print(err.Error())
 	}
 
 	log.Print("deleting validating admission webhook...")
 
-	_, err = c.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Get(context.TODO(), "quarantine", getOpts)
-
-	if err != nil {
-		return err
+	if err = c.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(context.TODO(), "quarantine", delOpts); err != nil {
+		log.Print(err.Error())
 	}
 
-	err = c.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Delete(context.TODO(), "quarantine", delOpts)
+	log.Print("deleting mutating admission webhook...")
+
+	if err = c.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Delete(context.TODO(), "quarantine", delOpts); err != nil {
+		log.Print(err.Error())
+	}
 
 	if err != nil {
-		return err
+		return errors.New("see log for errors during execution")
 	}
 
 	log.Print("webhook assets deleted successfully...")
-
 	return nil
 }

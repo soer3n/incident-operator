@@ -155,7 +155,7 @@ func initWebhookConfig() {
 	//webhookCA, _ := os.ReadFile(quarantineWebhookCertDir + "ca.crt")
 	webhookValidateObj := &admissionregv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
+			Name: "test-validate",
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ValidatingWebhookConfiguration",
@@ -170,7 +170,7 @@ func initWebhookConfig() {
 				FailurePolicy: &failedTypeV1,
 				Rules: []admissionregv1.RuleWithOperations{
 					{
-						Operations: []admissionregv1.OperationType{"CREATE", "UPDATE"},
+						Operations: []admissionregv1.OperationType{admissionregv1.Create, admissionregv1.Update},
 						Rule: admissionregv1.Rule{
 							APIGroups:   []string{"ops.soer3n.info"},
 							APIVersions: []string{"v1alpha1"},
@@ -185,7 +185,7 @@ func initWebhookConfig() {
 	mutatePath := "https://127.0.0.1:" + fmt.Sprint(quarantineWebhookPort) + quarantineWebhookMutatePath
 	webhookMutateObj := &admissionregv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "test",
+			Name: "test-mutate",
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "MutatingWebhookConfiguration",
@@ -200,7 +200,7 @@ func initWebhookConfig() {
 				FailurePolicy: &failedTypeV1,
 				Rules: []admissionregv1.RuleWithOperations{
 					{
-						Operations: []admissionregv1.OperationType{"UPDATE"},
+						Operations: []admissionregv1.OperationType{admissionregv1.Update},
 						Rule: admissionregv1.Rule{
 							APIGroups:   []string{"ops.soer3n.info"},
 							APIVersions: []string{"v1alpha1"},

@@ -14,6 +14,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+const quarantinePodLabelPrefix = "ops.soer3n.info/"
+const quarantineNodeRemoveLabel = "revert"
+
 func GetQuarantineInitSpec() []tests.QuarantineInitTestCase {
 	trueBool := true
 	falseBool := false
@@ -21,6 +24,11 @@ func GetQuarantineInitSpec() []tests.QuarantineInitTestCase {
 		{
 			ReturnError: nil,
 			Input: &v1alpha1.Quarantine{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						quarantinePodLabelPrefix + quarantineNodeRemoveLabel: "node1,node2",
+					},
+				},
 				Spec: v1alpha1.QuarantineSpec{
 					Debug: v1alpha1.Debug{
 						Image:     "foo:bar",
@@ -143,6 +151,21 @@ func GetQuarantineInitSpec() []tests.QuarantineInitTestCase {
 }
 
 func GetQuarantineStartStructs() []tests.QuarantineTestCase {
+
+	c := newQuarantineClient()
+	c.Nodes = []TestClientNode{
+		{Name: "foo", Drain: true}, {Name: "bar", Drain: false}, {Name: "baz", Drain: false},
+	}
+
+	c.Namespaces = []TestClientNamespace{
+		{
+			Name: "foo",
+			Pods: []TestClientResource{
+				{Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{""}, FieldSelector: []string{""}},
+				{Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{""}, FieldSelector: []string{""}},
+			},
+		},
+	}
 
 	fakeClientset := &mocks.Client{}
 	prepareClientMock(fakeClientset)
@@ -470,6 +493,42 @@ func GetQuarantineUpdateStructs() []tests.QuarantineTestCase {
 		{
 			ReturnError: nil,
 			Input: &q.Quarantine{
+				MarkedNodes: []*q.Node{
+					{
+						Name:    "baz",
+						Isolate: false,
+						Daemonsets: []q.Daemonset{
+							{
+								Name:      "baz",
+								Namespace: "baz",
+								Keep:      true,
+							},
+						},
+						Deployments: []q.Deployment{
+							{
+								Name:      "baz",
+								Namespace: "baz",
+								Keep:      true,
+							},
+						},
+						Logger: ctrl.Log.WithName("test"),
+						Flags: &drain.Helper{
+							Client:              fakeClientset,
+							IgnoreAllDaemonSets: true,
+							DisableEviction:     false,
+							DeleteEmptyDirData:  true,
+							Force:               false,
+						},
+						IOStreams: genericclioptions.IOStreams{
+							In:     os.Stdin,
+							Out:    os.Stdout,
+							ErrOut: os.Stdout,
+						},
+						Debug: q.Debug{
+							Enabled: false,
+						},
+					},
+				},
 				Nodes: []*q.Node{
 					{
 						Name:    "foo",

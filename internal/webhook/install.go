@@ -76,6 +76,10 @@ func (wc *Cert) createClusterWebhookCerts(namespace string) error {
 		return err
 	}
 
+	if err := wc.deployMutationWebhook(namespace, typedClient); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -151,6 +155,7 @@ func (w Cert) deployValidationWebhook(namespace string, c kubernetes.Interface) 
 					{
 						Operations: []admissionv1beta1.OperationType{
 							"CREATE",
+							"UPDATE",
 						},
 						Rule: admissionv1beta1.Rule{
 							APIGroups: []string{
@@ -184,6 +189,78 @@ func (w Cert) deployValidationWebhook(namespace string, c kubernetes.Interface) 
 	updateOpts := metav1.UpdateOptions{}
 
 	if _, err = c.AdmissionregistrationV1beta1().ValidatingWebhookConfigurations().Update(context.TODO(), webhookConfig, updateOpts); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (w Cert) deployMutationWebhook(namespace string, c kubernetes.Interface) error {
+
+	var err error
+
+	getOpts := metav1.GetOptions{}
+	_, err = c.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Get(context.TODO(), "quarantine", getOpts)
+
+	f := admissionv1beta1.Fail
+	mutatePath := "/mutate"
+	webhookConfig := &admissionv1beta1.MutatingWebhookConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "quarantine",
+		},
+		Webhooks: []admissionv1beta1.MutatingWebhook{
+			{
+				Name: "quarantine.webhook.svc",
+				AdmissionReviewVersions: []string{
+					"v1",
+					"v1beta1",
+				},
+				ClientConfig: admissionv1beta1.WebhookClientConfig{
+					Service: &admissionv1beta1.ServiceReference{
+						Name:      "quarantine-webhook",
+						Namespace: namespace,
+						Path:      &mutatePath,
+					},
+					CABundle: w.Ca.Cert,
+				},
+				FailurePolicy: &f,
+				Rules: []admissionv1beta1.RuleWithOperations{
+					{
+						Operations: []admissionv1beta1.OperationType{
+							"UPDATE",
+						},
+						Rule: admissionv1beta1.Rule{
+							APIGroups: []string{
+								"ops.soer3n.info",
+							},
+							APIVersions: []string{
+								"v1alpha1",
+							},
+							Resources: []string{
+								"quarantines",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+
+			createOpts := metav1.CreateOptions{}
+
+			if _, err = c.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Create(context.TODO(), webhookConfig, createOpts); err != nil {
+				return err
+			}
+		}
+		return err
+	}
+
+	updateOpts := metav1.UpdateOptions{}
+
+	if _, err = c.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Update(context.TODO(), webhookConfig, updateOpts); err != nil {
 		return err
 	}
 
