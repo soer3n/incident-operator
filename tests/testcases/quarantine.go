@@ -160,12 +160,21 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 	c.Namespaces = []TestClientNamespace{
 		{
 			Name: "foo",
-			Pods: []TestClientResource{
-				{Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{""}, FieldSelector: []string{""}},
-				{Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{""}, FieldSelector: []string{""}},
+			Pods: []TestClientPod{
+				{
+					Resource: TestClientResource{
+						Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{""}, FieldSelector: []string{""}},
+				},
+				{
+					Resource: TestClientResource{
+						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{""}, FieldSelector: []string{""},
+					},
+				},
 			},
 		},
 	}
+
+	c.prepare()
 
 	fakeClientset := &mocks.Client{}
 	prepareClientMock(fakeClientset)

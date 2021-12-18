@@ -105,97 +105,130 @@ func (t *TestClientQuarantine) setPods(corev1Mock *mocks.CoreV1) {
 	p := &mocks.PodV1{}
 
 	for _, n := range t.Namespaces {
+
 		for _, v := range n.Pods {
 
-			pod := &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      v.Name,
-					Namespace: n.Name,
-				},
-				Spec: corev1.PodSpec{
-					NodeName:   v.Node,
-					Containers: []corev1.Container{},
-				},
-			}
-
-			if v.Isolated {
-				pod.ObjectMeta.Labels["ops.soer3n.info/quarantine"] = "true"
-			}
-
-			if v.Taint {
-				pod.Spec.Tolerations = []corev1.Toleration{
-					{
-						Key:      "quarantine",
-						Operator: "Exists",
-						Value:    "",
-						Effect:   "NoSchedule",
+			go func(v TestClientPod) {
+				pod := &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      v.Resource.Name,
+						Namespace: n.Name,
+					},
+					Spec: corev1.PodSpec{
+						NodeName:   v.Resource.Node,
+						Containers: []corev1.Container{},
 					},
 				}
-			}
 
-			podList := &corev1.PodList{
-				Items: []corev1.Pod{
-					*pod,
-				},
-			}
-
-			p.On("Get", context.TODO(), v.Name, metav1.GetOptions{}).Return(pod, nil)
-
-			if len(v.ListSelector) > 0 {
-				for _, s := range v.ListSelector {
-					p.On("List", context.Background(), metav1.ListOptions{
-						LabelSelector: s,
-					}).Return(podList, nil)
+				if v.Resource.Isolated {
+					pod.ObjectMeta.Labels["ops.soer3n.info/quarantine"] = "true"
 				}
-			}
 
-			if len(v.ListSelector) > 0 && len(v.FieldSelector) > 0 {
-				for _, s := range v.ListSelector {
-					for _, f := range v.FieldSelector {
+				if v.Resource.Taint {
+					pod.Spec.Tolerations = []corev1.Toleration{
+						{
+							Key:      "quarantine",
+							Operator: "Exists",
+							Value:    "",
+							Effect:   "NoSchedule",
+						},
+					}
+				}
+
+				v.pod = pod
+
+				podList := &corev1.PodList{
+					Items: []corev1.Pod{
+						*pod,
+					},
+				}
+
+				if len(v.Resource.ListSelector) > 0 {
+					for _, s := range v.Resource.ListSelector {
 						p.On("List", context.Background(), metav1.ListOptions{
 							LabelSelector: s,
+						}).Return(podList, nil)
+					}
+				}
+
+				if len(v.Resource.ListSelector) > 0 && len(v.Resource.FieldSelector) > 0 {
+					for _, s := range v.Resource.ListSelector {
+						for _, f := range v.Resource.FieldSelector {
+							p.On("List", context.Background(), metav1.ListOptions{
+								LabelSelector: s,
+								FieldSelector: f,
+							}).Return(podList, nil)
+						}
+					}
+				}
+
+				if len(v.Resource.FieldSelector) > 0 {
+					for _, f := range v.Resource.FieldSelector {
+						p.On("List", context.Background(), metav1.ListOptions{
 							FieldSelector: f,
 						}).Return(podList, nil)
 					}
 				}
-			}
 
-			if len(v.FieldSelector) > 0 {
-				for _, f := range v.FieldSelector {
-					p.On("List", context.Background(), metav1.ListOptions{
-						FieldSelector: f,
-					}).Return(podList, nil)
+				p.On("Get", context.TODO(), v.Resource.Name, metav1.GetOptions{}).Return(pod, nil)
+
+				p.On("Update", context.Background(), pod, metav1.UpdateOptions{}).Return(pod, nil)
+				p.On("Update", context.TODO(), pod, metav1.UpdateOptions{}).Return(pod, nil)
+
+				gracePeriod := int64(0)
+
+				p.On("Delete", context.TODO(), v.Resource.Name, metav1.DeleteOptions{
+					GracePeriodSeconds: &gracePeriod,
+				}).Return(nil)
+
+				if v.Resource.Watch {
+					watchChan := watch.NewFake()
+					timeout := int64(20)
+
+					p.On("Watch", context.TODO(), metav1.ListOptions{
+						LabelSelector:  "kubernetes.io/hostname=" + v.Resource.Node,
+						Watch:          true,
+						TimeoutSeconds: &timeout,
+					}).Return(
+						watchChan, nil,
+					).Run(func(args mock.Arguments) {
+						go func() {
+							watchChan.Add(pod)
+						}()
+					})
 				}
-			}
-
-			p.On("Update", context.Background(), pod, metav1.UpdateOptions{}).Return(pod, nil)
-			p.On("Update", context.TODO(), pod, metav1.UpdateOptions{}).Return(pod, nil)
-
-			gracePeriod := int64(0)
-
-			p.On("Delete", context.TODO(), v.Name, metav1.DeleteOptions{
-				GracePeriodSeconds: &gracePeriod,
-			}).Return(nil)
-
-			if v.Watch {
-				watchChan := watch.NewFake()
-				timeout := int64(20)
-
-				p.On("Watch", context.TODO(), metav1.ListOptions{
-					LabelSelector:  "kubernetes.io/hostname=" + v.Node,
-					Watch:          true,
-					TimeoutSeconds: &timeout,
-				}).Return(
-					watchChan, nil,
-				).Run(func(args mock.Arguments) {
-					go func() {
-						watchChan.Add(pod)
-					}()
-				})
-			}
+			}(v)
 		}
 		corev1Mock.On("Pods", n.Name).Return(p)
 	}
+}
+
+func (n *TestClientNamespace) parsePodList() error {
+
+	/*labelMap := map[string][]*corev1.Pod{}
+	fieldSelectorMap := map[string][]*corev1.Pod{}
+
+	for _, p := range n.Pods {
+
+	}
+
+	for _, v := range n.Pods {
+
+	}
+
+	for k, v := range labelMap {
+		podv1Mock.On("List", context.Background(), metav1.ListOptions{
+			LabelSelector: s,
+			FieldSelector: f,
+		}).Return(podList, nil)
+	}
+	*/
+	return nil
+}
+
+func (n *TestClientQuarantine) parsePodList(corev1Mock *mocks.CoreV1, podList *corev1.PodList) error {
+
+	return nil
 }
 
 func (t *TestClientQuarantine) setDeployments(appsv1Mock *mocks.AppsV1) error {
