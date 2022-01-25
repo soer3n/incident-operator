@@ -22,7 +22,7 @@ type TestClientNamespace struct {
 	Name        string
 	Daemonsets  []TestClientResource
 	Deployments []TestClientResource
-	Pods        []TestClientPod
+	Pods        []*TestClientPod
 }
 
 type TestClientResource struct {
@@ -39,10 +39,15 @@ type TestClientResource struct {
 
 type TestClientPod struct {
 	Resource TestClientResource
-	pod      *corev1.Pod
+	pod      corev1.Pod
 }
 
 type TestClientError struct {
 	Enabled bool
 	Message string
+}
+
+type TestClientSelectors struct {
+	ListSelectors  map[string][]string
+	FieldSelectors map[string][]string
 }

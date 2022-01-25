@@ -160,14 +160,14 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 	c.Namespaces = []TestClientNamespace{
 		{
 			Name: "foo",
-			Pods: []TestClientPod{
+			Pods: []*TestClientPod{
 				{
 					Resource: TestClientResource{
-						Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{""}, FieldSelector: []string{""}},
+						Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"spec.foo=bar"}, FieldSelector: []string{""}},
 				},
 				{
 					Resource: TestClientResource{
-						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{""}, FieldSelector: []string{""},
+						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{""}, FieldSelector: []string{"spec.foo=bar"},
 					},
 				},
 			},
@@ -197,7 +197,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 						Deployments: []q.Deployment{},
 						Logger:      ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client:              fakeClientset,
+							Client:              c.FakeClient,
 							IgnoreAllDaemonSets: true,
 							DisableEviction:     false,
 							DeleteEmptyDirData:  true,
@@ -234,7 +234,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 						Deployments: []q.Deployment{},
 						Logger:      ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client:              fakeClientsetBar,
+							Client:              c.FakeClient,
 							IgnoreAllDaemonSets: true,
 							DisableEviction:     false,
 							DeleteEmptyDirData:  true,
@@ -271,7 +271,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 						Deployments: []q.Deployment{},
 						Logger:      ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client:              fakeClientsetBaz,
+							Client:              c.FakeClient,
 							IgnoreAllDaemonSets: true,
 							DisableEviction:     false,
 							DeleteEmptyDirData:  true,

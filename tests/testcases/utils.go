@@ -2,6 +2,8 @@ package testcases
 
 import (
 	"context"
+	"log"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -108,105 +110,180 @@ func (t *TestClientQuarantine) setPods(corev1Mock *mocks.CoreV1) {
 
 		for _, v := range n.Pods {
 
-			go func(v TestClientPod) {
-				pod := &corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      v.Resource.Name,
-						Namespace: n.Name,
-					},
-					Spec: corev1.PodSpec{
-						NodeName:   v.Resource.Node,
-						Containers: []corev1.Container{},
-					},
-				}
+			v.pod = corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      v.Resource.Name,
+					Namespace: n.Name,
+				},
+				Spec: corev1.PodSpec{
+					NodeName:   v.Resource.Node,
+					Containers: []corev1.Container{},
+				},
+			}
 
-				if v.Resource.Isolated {
-					pod.ObjectMeta.Labels["ops.soer3n.info/quarantine"] = "true"
-				}
+			if v.Resource.Isolated {
+				v.pod.ObjectMeta.Labels["ops.soer3n.info/quarantine"] = "true"
+			}
 
-				if v.Resource.Taint {
-					pod.Spec.Tolerations = []corev1.Toleration{
-						{
-							Key:      "quarantine",
-							Operator: "Exists",
-							Value:    "",
-							Effect:   "NoSchedule",
-						},
-					}
-				}
-
-				v.pod = pod
-
-				podList := &corev1.PodList{
-					Items: []corev1.Pod{
-						*pod,
+			if v.Resource.Taint {
+				v.pod.Spec.Tolerations = []corev1.Toleration{
+					{
+						Key:      "quarantine",
+						Operator: "Exists",
+						Value:    "",
+						Effect:   "NoSchedule",
 					},
 				}
+			}
 
-				if len(v.Resource.ListSelector) > 0 {
-					for _, s := range v.Resource.ListSelector {
-						p.On("List", context.Background(), metav1.ListOptions{
-							LabelSelector: s,
-						}).Return(podList, nil)
-					}
+			podList := &corev1.PodList{
+				Items: []corev1.Pod{
+					v.pod,
+				},
+			}
+
+			if len(v.Resource.ListSelector) > 0 {
+				for _, s := range v.Resource.ListSelector {
+					p.On("List", context.Background(), metav1.ListOptions{
+						LabelSelector: s,
+					}).Return(podList, nil)
 				}
+			}
 
-				if len(v.Resource.ListSelector) > 0 && len(v.Resource.FieldSelector) > 0 {
-					for _, s := range v.Resource.ListSelector {
-						for _, f := range v.Resource.FieldSelector {
-							p.On("List", context.Background(), metav1.ListOptions{
-								LabelSelector: s,
-								FieldSelector: f,
-							}).Return(podList, nil)
-						}
-					}
-				}
-
-				if len(v.Resource.FieldSelector) > 0 {
+			if len(v.Resource.ListSelector) > 0 && len(v.Resource.FieldSelector) > 0 {
+				for _, s := range v.Resource.ListSelector {
 					for _, f := range v.Resource.FieldSelector {
 						p.On("List", context.Background(), metav1.ListOptions{
+							LabelSelector: s,
 							FieldSelector: f,
 						}).Return(podList, nil)
 					}
 				}
+			}
 
-				p.On("Get", context.TODO(), v.Resource.Name, metav1.GetOptions{}).Return(pod, nil)
-
-				p.On("Update", context.Background(), pod, metav1.UpdateOptions{}).Return(pod, nil)
-				p.On("Update", context.TODO(), pod, metav1.UpdateOptions{}).Return(pod, nil)
-
-				gracePeriod := int64(0)
-
-				p.On("Delete", context.TODO(), v.Resource.Name, metav1.DeleteOptions{
-					GracePeriodSeconds: &gracePeriod,
-				}).Return(nil)
-
-				if v.Resource.Watch {
-					watchChan := watch.NewFake()
-					timeout := int64(20)
-
-					p.On("Watch", context.TODO(), metav1.ListOptions{
-						LabelSelector:  "kubernetes.io/hostname=" + v.Resource.Node,
-						Watch:          true,
-						TimeoutSeconds: &timeout,
-					}).Return(
-						watchChan, nil,
-					).Run(func(args mock.Arguments) {
-						go func() {
-							watchChan.Add(pod)
-						}()
-					})
+			if len(v.Resource.FieldSelector) > 0 {
+				for _, f := range v.Resource.FieldSelector {
+					p.On("List", context.Background(), metav1.ListOptions{
+						FieldSelector: f,
+					}).Return(podList, nil)
 				}
-			}(v)
+			}
+
+			p.On("Get", context.TODO(), v.Resource.Name, metav1.GetOptions{}).Return(v.pod, nil)
+
+			p.On("Update", context.Background(), v.pod, metav1.UpdateOptions{}).Return(v.pod, nil)
+			p.On("Update", context.TODO(), v.pod, metav1.UpdateOptions{}).Return(v.pod, nil)
+
+			gracePeriod := int64(0)
+
+			p.On("Delete", context.TODO(), v.Resource.Name, metav1.DeleteOptions{
+				GracePeriodSeconds: &gracePeriod,
+			}).Return(nil)
+
+			if v.Resource.Watch {
+				watchChan := watch.NewFake()
+				timeout := int64(20)
+
+				p.On("Watch", context.TODO(), metav1.ListOptions{
+					LabelSelector:  "kubernetes.io/hostname=" + v.Resource.Node,
+					Watch:          true,
+					TimeoutSeconds: &timeout,
+				}).Return(
+					watchChan, nil,
+				).Run(func(args mock.Arguments) {
+					go func() {
+						watchChan.Add(&v.pod)
+					}()
+				})
+			}
+
 		}
 		corev1Mock.On("Pods", n.Name).Return(p)
+		selectors := getSelectorMaps(n.Pods)
+		n.parsePodList(p, selectors)
 	}
+
+	t.parsePodList(p)
 }
 
-func (n *TestClientNamespace) parsePodList() error {
+// Contains represents func for checking if a string is in a list of strings
+func Contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
 
-	/*labelMap := map[string][]*corev1.Pod{}
-	fieldSelectorMap := map[string][]*corev1.Pod{}
+func getSelectorMaps(pods []*TestClientPod) TestClientSelectors {
+
+	tcs := TestClientSelectors{
+		ListSelectors:  map[string][]string{},
+		FieldSelectors: map[string][]string{},
+	}
+
+	for _, p := range pods {
+		if len(p.Resource.FieldSelector) > 0 {
+			for _, fs := range p.Resource.FieldSelector {
+				if len(fs) == 0 {
+					continue
+				}
+
+				fieldSelectorList := strings.Split(fs, "=")
+
+				if len(fieldSelectorList) > 2 {
+					panic(errors.NewBadRequest("more than one operator!"))
+				}
+
+				if _, ok := tcs.ListSelectors[fieldSelectorList[0]]; !ok {
+					tcs.ListSelectors[fieldSelectorList[0]] = []string{fieldSelectorList[1]}
+					continue
+				}
+
+				if Contains(tcs.ListSelectors[fieldSelectorList[0]], fieldSelectorList[1]) {
+					continue
+				}
+
+				tcs.ListSelectors[fieldSelectorList[0]] = append(tcs.ListSelectors[fieldSelectorList[0]], fieldSelectorList[1])
+			}
+
+		}
+
+		if len(p.Resource.ListSelector) > 0 {
+			for _, ls := range p.Resource.ListSelector {
+				if len(ls) == 0 {
+					continue
+				}
+
+				selectorList := strings.Split(ls, "=")
+
+				if len(selectorList) > 2 {
+					panic(errors.NewBadRequest("more than one operator!"))
+				}
+
+				if _, ok := tcs.ListSelectors[selectorList[0]]; !ok {
+					tcs.ListSelectors[selectorList[0]] = []string{selectorList[1]}
+					continue
+				}
+
+				if Contains(tcs.ListSelectors[selectorList[0]], selectorList[1]) {
+					continue
+				}
+
+				tcs.ListSelectors[selectorList[0]] = append(tcs.ListSelectors[selectorList[0]], selectorList[1])
+			}
+		}
+	}
+
+	return tcs
+}
+
+func (n *TestClientNamespace) parsePodList(podv1Mock *mocks.PodV1, selectors TestClientSelectors) error {
+
+	labelMap := map[string][]*corev1.Pod{}
+	log.Print(labelMap)
+	/*fieldSelectorMap := map[string][]*corev1.Pod{}
 
 	for _, p := range n.Pods {
 
@@ -226,7 +303,10 @@ func (n *TestClientNamespace) parsePodList() error {
 	return nil
 }
 
-func (n *TestClientQuarantine) parsePodList(corev1Mock *mocks.CoreV1, podList *corev1.PodList) error {
+func (n *TestClientQuarantine) parsePodList(podv1Mock *mocks.PodV1) error {
+
+	labelMap := map[string][]*corev1.Pod{}
+	log.Print(labelMap)
 
 	return nil
 }
