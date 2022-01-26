@@ -105,6 +105,10 @@ func (t *TestClientQuarantine) setNodes(corev1Mock *mocks.CoreV1) {
 func (t *TestClientQuarantine) setPods(corev1Mock *mocks.CoreV1) {
 
 	p := &mocks.PodV1{}
+	testGlobalSelectors := &TestClientSelectors{
+		ListSelectors:  map[string][]string{},
+		FieldSelectors: map[string][]string{},
+	}
 
 	for _, n := range t.Namespaces {
 
@@ -200,10 +204,34 @@ func (t *TestClientQuarantine) setPods(corev1Mock *mocks.CoreV1) {
 		}
 		corev1Mock.On("Pods", n.Name).Return(p)
 		selectors := getSelectorMaps(n.Pods)
+		testGlobalSelectors = mergeMaps(testGlobalSelectors, selectors)
 		n.parsePodList(p, selectors)
 	}
 
-	t.parsePodList(p)
+	t.parsePodList(p, testGlobalSelectors)
+}
+
+func mergeMaps(global, namespaced *TestClientSelectors) *TestClientSelectors {
+
+	for k, v := range namespaced.ListSelectors {
+		if _, ok := global.ListSelectors[k]; !ok {
+			global.ListSelectors[k] = v
+			continue
+		}
+
+		global.ListSelectors[k] = append(global.ListSelectors[k], v...)
+	}
+
+	for k, v := range namespaced.FieldSelectors {
+		if _, ok := global.FieldSelectors[k]; !ok {
+			global.FieldSelectors[k] = v
+			continue
+		}
+
+		global.FieldSelectors[k] = append(global.FieldSelectors[k], v...)
+	}
+
+	return global
 }
 
 // Contains represents func for checking if a string is in a list of strings
@@ -216,70 +244,75 @@ func Contains(list []string, s string) bool {
 	return false
 }
 
-func getSelectorMaps(pods []*TestClientPod) TestClientSelectors {
+func getSelectorMaps(pods []*TestClientPod) *TestClientSelectors {
 
-	tcs := TestClientSelectors{
+	tcs := &TestClientSelectors{
 		ListSelectors:  map[string][]string{},
 		FieldSelectors: map[string][]string{},
 	}
 
 	for _, p := range pods {
-		if len(p.Resource.FieldSelector) > 0 {
-			for _, fs := range p.Resource.FieldSelector {
-				if len(fs) == 0 {
-					continue
-				}
-
-				fieldSelectorList := strings.Split(fs, "=")
-
-				if len(fieldSelectorList) > 2 {
-					panic(errors.NewBadRequest("more than one operator!"))
-				}
-
-				if _, ok := tcs.ListSelectors[fieldSelectorList[0]]; !ok {
-					tcs.ListSelectors[fieldSelectorList[0]] = []string{fieldSelectorList[1]}
-					continue
-				}
-
-				if Contains(tcs.ListSelectors[fieldSelectorList[0]], fieldSelectorList[1]) {
-					continue
-				}
-
-				tcs.ListSelectors[fieldSelectorList[0]] = append(tcs.ListSelectors[fieldSelectorList[0]], fieldSelectorList[1])
-			}
-
-		}
-
-		if len(p.Resource.ListSelector) > 0 {
-			for _, ls := range p.Resource.ListSelector {
-				if len(ls) == 0 {
-					continue
-				}
-
-				selectorList := strings.Split(ls, "=")
-
-				if len(selectorList) > 2 {
-					panic(errors.NewBadRequest("more than one operator!"))
-				}
-
-				if _, ok := tcs.ListSelectors[selectorList[0]]; !ok {
-					tcs.ListSelectors[selectorList[0]] = []string{selectorList[1]}
-					continue
-				}
-
-				if Contains(tcs.ListSelectors[selectorList[0]], selectorList[1]) {
-					continue
-				}
-
-				tcs.ListSelectors[selectorList[0]] = append(tcs.ListSelectors[selectorList[0]], selectorList[1])
-			}
-		}
+		parseSelectorMap(p.Resource, tcs)
 	}
 
 	return tcs
 }
 
-func (n *TestClientNamespace) parsePodList(podv1Mock *mocks.PodV1, selectors TestClientSelectors) error {
+func parseSelectorMap(resource TestClientResource, tcs *TestClientSelectors) {
+
+	if len(resource.FieldSelector) > 0 {
+		for _, fs := range resource.FieldSelector {
+			if len(fs) == 0 {
+				continue
+			}
+
+			fieldSelectorList := strings.Split(fs, "=")
+
+			if len(fieldSelectorList) > 2 {
+				panic(errors.NewBadRequest("more than one operator!"))
+			}
+
+			if _, ok := tcs.ListSelectors[fieldSelectorList[0]]; !ok {
+				tcs.ListSelectors[fieldSelectorList[0]] = []string{fieldSelectorList[1]}
+				continue
+			}
+
+			if Contains(tcs.ListSelectors[fieldSelectorList[0]], fieldSelectorList[1]) {
+				continue
+			}
+
+			tcs.ListSelectors[fieldSelectorList[0]] = append(tcs.ListSelectors[fieldSelectorList[0]], fieldSelectorList[1])
+		}
+
+	}
+
+	if len(resource.ListSelector) > 0 {
+		for _, ls := range resource.ListSelector {
+			if len(ls) == 0 {
+				continue
+			}
+
+			selectorList := strings.Split(ls, "=")
+
+			if len(selectorList) > 2 {
+				panic(errors.NewBadRequest("more than one operator!"))
+			}
+
+			if _, ok := tcs.ListSelectors[selectorList[0]]; !ok {
+				tcs.ListSelectors[selectorList[0]] = []string{selectorList[1]}
+				continue
+			}
+
+			if Contains(tcs.ListSelectors[selectorList[0]], selectorList[1]) {
+				continue
+			}
+
+			tcs.ListSelectors[selectorList[0]] = append(tcs.ListSelectors[selectorList[0]], selectorList[1])
+		}
+	}
+}
+
+func (n *TestClientNamespace) parsePodList(podv1Mock *mocks.PodV1, selectors *TestClientSelectors) error {
 
 	labelMap := map[string][]*corev1.Pod{}
 	log.Print(labelMap)
@@ -303,7 +336,7 @@ func (n *TestClientNamespace) parsePodList(podv1Mock *mocks.PodV1, selectors Tes
 	return nil
 }
 
-func (n *TestClientQuarantine) parsePodList(podv1Mock *mocks.PodV1) error {
+func (n *TestClientQuarantine) parsePodList(podv1Mock *mocks.PodV1, selectors *TestClientSelectors) error {
 
 	labelMap := map[string][]*corev1.Pod{}
 	log.Print(labelMap)
