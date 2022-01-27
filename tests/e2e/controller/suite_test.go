@@ -59,13 +59,9 @@ var cancel context.CancelFunc
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
-		[]Reporter{})
 }
 
-var _ = BeforeSuite(func(done Done) {
+var _ = BeforeSuite(func() {
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 	Expect(os.Setenv("USE_EXISTING_CLUSTER", "true")).To(Succeed())
 
@@ -129,8 +125,6 @@ var _ = BeforeSuite(func(done Done) {
 			Expect(err).NotTo(HaveOccurred())
 		}
 	}()
-
-	close(done)
 
 }, 60)
 

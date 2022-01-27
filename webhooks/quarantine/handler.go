@@ -47,13 +47,15 @@ func (h *QuarantineValidateHandler) Handle(ctx context.Context, req admission.Re
 // Handle handles admission requests.
 func (h *QuarantineMutateHandler) Handle(ctx context.Context, req admission.Request) admission.Response {
 
-	if obj, err = h.manageObject(req); err != nil {
+	oldObj := &v1alpha1.Quarantine{}
+
+	if oldObj, err = h.manageObject(req); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
 	switch t := req.Operation; t {
 	case admissionv1.Update:
-		err = h.MutateUpdate(obj)
+		err = h.MutateUpdate(oldObj)
 	}
 
 	if err != nil {
@@ -86,6 +88,27 @@ func (h *QuarantineValidateHandler) Validate() error {
 // MutateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (h *QuarantineMutateHandler) MutateUpdate(old runtime.Object) error {
 	h.Log.Info("validate update", "name", obj.Name)
+
+	markedNodes := []*v1alpha1.Node{}
+
+	oo := old.(*v1alpha1.Quarantine)
+
+	for _, on := range oo.Spec.Nodes {
+
+		isMarked := true
+		for _, cn := range obj.Spec.Nodes {
+			if on.Name == cn.Name {
+				isMarked = false
+				break
+			}
+		}
+
+		if isMarked {
+			markedNodes = append(markedNodes, &on)
+		}
+	}
+
+	h.Log.Info("marked:", "nodes", markedNodes)
 
 	// TODO(user): fill in your validation logic upon object update.
 	return nil

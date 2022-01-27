@@ -69,6 +69,15 @@
             "args": ["-test.run", "TestUpdateQuarantine"],
             "env": {},
             "showLog": true
-    },
+        },
+        {
+            "name": "Test quarantine webhooks",
+            "type": "go",
+            "request": "launch",
+            "mode": "test",
+            "program": "${workspaceFolder}/tests/e2e/webhook",
+            "env": {},
+            "showLog": true
+        },
     ]
 }

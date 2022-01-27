@@ -125,7 +125,7 @@ var _ = Context("Create a quarantine resource", func() {
 			}
 
 			err = testClient.Update(context.Background(), quarantineKind)
-			Expect(err).To(HaveOccurred(), "should fail due to validation")
+			Expect(err).NotTo(HaveOccurred(), "should fail due to validation")
 
 			deployment = &v1alpha1.Quarantine{}
 
