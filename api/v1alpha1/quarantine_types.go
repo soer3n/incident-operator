@@ -46,8 +46,10 @@ type Node struct {
 
 // Resource defines a workload to isolate on a node
 type Resource struct {
-	Type      string `json:"type,omitempty"`
-	Name      string `json:"name,omitempty"`
+	Type string `json:"type,omitempty"`
+	// +kubebuilder:default:="debug"
+	Name string `json:"name,omitempty"`
+	// +kubebuilder:default:="default"
 	Namespace string `json:"namespace,omitempty"`
 	// +kubebuilder:default:=false
 	Keep bool `json:"keep,omitempty"`
@@ -65,8 +67,10 @@ type Flags struct {
 // Debug defines a debug pod configuration
 type Debug struct {
 	// +kubebuilder:default:=false
-	Enabled   bool   `json:"enabled"`
-	Image     string `json:"image,omitempty"`
+	Enabled bool `json:"enabled"`
+	// +kubebuilder:default:="nicolaka/netshoot"
+	Image string `json:"image,omitempty"`
+	// +kubebuilder:default:="default"
 	Namespace string `json:"namespace,omitempty"`
 }
 

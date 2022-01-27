@@ -43,8 +43,10 @@ spec:
                     default: false
                     type: boolean
                   image:
+                    default: nicolaka/netshoot
                     type: string
                   namespace:
+                    default: default
                     type: string
                 required:
                 - enabled
@@ -95,8 +97,10 @@ spec:
                             default: false
                             type: boolean
                           name:
+                            default: debug
                             type: string
                           namespace:
+                            default: default
                             type: string
                           type:
                             type: string
@@ -114,8 +118,10 @@ spec:
                       default: false
                       type: boolean
                     name:
+                      default: debug
                       type: string
                     namespace:
+                      default: default
                       type: string
                     type:
                       type: string

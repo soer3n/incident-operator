@@ -28,8 +28,9 @@ func (dg Debug) deploy(c kubernetes.Interface, nodeName string) error {
 	*autoMountToken = false
 	debugPod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   debugPodName + "-" + nodeName,
-			Labels: map[string]string{},
+			Name:      debugPodName + "-" + nodeName,
+			Namespace: dg.Namespace,
+			Labels:    map[string]string{},
 		},
 		Spec: corev1.PodSpec{
 			AutomountServiceAccountToken: autoMountToken,

@@ -93,6 +93,7 @@ require (
 	golang.org/x/time v0.0.0-20210611083556-38a9dc6acbc6 // indirect
 	golang.org/x/tools v0.1.6-0.20210908190839-cf92b39a962c // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
+	gonum.org/v1/gonum v0.9.3
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.26.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

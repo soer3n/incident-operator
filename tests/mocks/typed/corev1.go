@@ -122,7 +122,7 @@ func (getter *PodV1) Watch(ctx context.Context, opts metav1.ListOptions) (watch.
 // Create represents mock func for similar runtime client func
 func (getter *PodV1) Create(ctx context.Context, obj *v1.Pod, options metav1.CreateOptions) (*v1.Pod, error) {
 	args := getter.Called(ctx, obj, options)
-	values := args.Get(1).(*v1.Pod)
+	values := args.Get(0).(*v1.Pod)
 	err := args.Error(1)
 	return values, err
 }

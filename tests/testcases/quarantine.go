@@ -6,7 +6,6 @@ import (
 	"github.com/soer3n/incident-operator/api/v1alpha1"
 	q "github.com/soer3n/incident-operator/internal/quarantine"
 	"github.com/soer3n/incident-operator/tests"
-	mocks "github.com/soer3n/incident-operator/tests/mocks/typed"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -163,11 +162,25 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 			Pods: []*TestClientPod{
 				{
 					Resource: TestClientResource{
-						Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"spec.foo=bar"}, FieldSelector: []string{""}},
+						Name: "quarantine-debug", Node: "foo", Isolated: false, GracePeriod: true, Watch: true, Taint: false, ListSelector: []string{"foo=bar"}, FieldSelector: []string{"spec.nodeName=bar"}},
 				},
 				{
 					Resource: TestClientResource{
-						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{""}, FieldSelector: []string{"spec.foo=bar"},
+						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{"foo=bar"}, FieldSelector: []string{"spec.nodeName=bar"},
+					},
+				},
+			},
+		},
+		{
+			Name: "bar",
+			Pods: []*TestClientPod{
+				{
+					Resource: TestClientResource{
+						Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"spec.foo=baz"}, FieldSelector: []string{""}},
+				},
+				{
+					Resource: TestClientResource{
+						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{""}, FieldSelector: []string{"spec.bar=foo"},
 					},
 				},
 			},
@@ -175,15 +188,6 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 	}
 
 	c.prepare()
-
-	fakeClientset := &mocks.Client{}
-	prepareClientMock(fakeClientset)
-
-	fakeClientsetBar := &mocks.Client{}
-	prepareClientMock(fakeClientsetBar)
-
-	fakeClientsetBaz := &mocks.Client{}
-	prepareClientMock(fakeClientsetBaz)
 
 	return []tests.QuarantineTestCase{
 		{
@@ -202,7 +206,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 							DisableEviction:     false,
 							DeleteEmptyDirData:  true,
 							Force:               true,
-							PodSelector:         "quarantine-start",
+							PodSelector:         "foo=bar",
 							ErrOut:              os.Stdout,
 							Out:                 os.Stdout,
 						},
@@ -239,7 +243,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 							DisableEviction:     false,
 							DeleteEmptyDirData:  true,
 							Force:               true,
-							PodSelector:         "quarantine-start",
+							PodSelector:         "foo=bar",
 							ErrOut:              os.Stdout,
 							Out:                 os.Stdout,
 						},
@@ -276,7 +280,7 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 							DisableEviction:     false,
 							DeleteEmptyDirData:  true,
 							Force:               true,
-							PodSelector:         "quarantine-start",
+							PodSelector:         "foo=bar",
 							ErrOut:              os.Stdout,
 							Out:                 os.Stdout,
 						},
@@ -303,8 +307,53 @@ func GetQuarantineStartStructs() []tests.QuarantineTestCase {
 func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 
 	res := []tests.QuarantineTestCase{}
-	clientsetA := &mocks.Client{}
-	prepareClientMock(clientsetA)
+	c := newQuarantineClient()
+	c.Nodes = []TestClientNode{
+		{Name: "foo", Drain: true}, {Name: "bar", Drain: false}, {Name: "baz", Drain: false},
+	}
+
+	c.Namespaces = []TestClientNamespace{
+		{
+			Name: "foo",
+			Pods: []*TestClientPod{
+				{
+					Resource: TestClientResource{
+						Name: "quarantine-debug-bar", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{"ops.soer3n.info/quarantine=true"}, FieldSelector: []string{},
+					},
+				},
+				{
+					Resource: TestClientResource{
+						Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"foo=bar"}, FieldSelector: []string{"spec.nodeName=bar"}},
+				},
+				{
+					Resource: TestClientResource{
+						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{"foo=bar"}, FieldSelector: []string{"spec.nodeName=bar"},
+					},
+				},
+			},
+		},
+		{
+			Name: "bar",
+			Pods: []*TestClientPod{
+				{
+					Resource: TestClientResource{
+						Name: "quarantine-debug-bar", Node: "bar", Isolated: false, Watch: true, Taint: true, ListSelector: []string{"ops.soer3n.info/quarantine=true"}, FieldSelector: []string{},
+					},
+				},
+				{
+					Resource: TestClientResource{
+						Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"spec.foo=baz"}, FieldSelector: []string{}},
+				},
+				{
+					Resource: TestClientResource{
+						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{""}, FieldSelector: []string{"spec.bar=foo"},
+					},
+				},
+			},
+		},
+	}
+
+	c.prepare()
 
 	res = append(res, tests.QuarantineTestCase{
 		ReturnError: nil,
@@ -329,7 +378,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 					},
 					Logger: ctrl.Log.WithName("test"),
 					Flags: &drain.Helper{
-						Client:              clientsetA,
+						Client:              c.FakeClient,
 						IgnoreAllDaemonSets: true,
 						DisableEviction:     false,
 						DeleteEmptyDirData:  true,
@@ -341,7 +390,9 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 						ErrOut: os.Stdout,
 					},
 					Debug: q.Debug{
-						Enabled: false,
+						Enabled:   false,
+						Namespace: "default",
+						Image:     "nicolaka/netshoot",
 					},
 				},
 				{
@@ -351,7 +402,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 					Deployments: []q.Deployment{},
 					Logger:      ctrl.Log.WithName("test"),
 					Flags: &drain.Helper{
-						Client:              clientsetA,
+						Client:              c.FakeClient,
 						IgnoreAllDaemonSets: true,
 						DisableEviction:     false,
 						DeleteEmptyDirData:  true,
@@ -363,20 +414,22 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 						ErrOut: os.Stdout,
 					},
 					Debug: q.Debug{
-						Enabled: true,
+						Enabled:   true,
+						Namespace: "foo",
+						Image:     "nicolaka/netshoot",
 					},
 				},
 			},
 			Logger: ctrl.Log.WithName("test"),
 			Debug: q.Debug{
-				Enabled: true,
+				Enabled:   true,
+				Namespace: "foo",
+				Image:     "nicolaka/netshoot",
 			},
 			Conditions: []metav1.Condition{},
 		},
 	})
 
-	clientsetB := &mocks.Client{}
-	prepareClientMock(clientsetB)
 	res = append(res, tests.QuarantineTestCase{
 		ReturnError: nil,
 		Input: &q.Quarantine{
@@ -388,7 +441,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 					Deployments: []q.Deployment{},
 					Logger:      ctrl.Log.WithName("test"),
 					Flags: &drain.Helper{
-						Client:              clientsetB,
+						Client:              c.FakeClient,
 						IgnoreAllDaemonSets: true,
 						DisableEviction:     false,
 						DeleteEmptyDirData:  true,
@@ -400,7 +453,9 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 						ErrOut: os.Stdout,
 					},
 					Debug: q.Debug{
-						Enabled: false,
+						Enabled:   false,
+						Namespace: "default",
+						Image:     "nicolaka/netshoot",
 					},
 				},
 				{
@@ -410,7 +465,7 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 					Deployments: []q.Deployment{},
 					Logger:      ctrl.Log.WithName("test"),
 					Flags: &drain.Helper{
-						Client:              clientsetB,
+						Client:              c.FakeClient,
 						IgnoreAllDaemonSets: true,
 						DisableEviction:     false,
 						DeleteEmptyDirData:  true,
@@ -422,13 +477,17 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 						ErrOut: os.Stdout,
 					},
 					Debug: q.Debug{
-						Enabled: true,
+						Enabled:   true,
+						Namespace: "foo",
+						Image:     "nicolaka/netshoot",
 					},
 				},
 			},
 			Logger: ctrl.Log.WithName("test"),
 			Debug: q.Debug{
-				Enabled: false,
+				Enabled:   false,
+				Namespace: "foo",
+				Image:     "nicolaka/netshoot",
 			},
 			Conditions: []metav1.Condition{},
 		},
@@ -439,8 +498,53 @@ func GetQuarantinePrepareStructs() []tests.QuarantineTestCase {
 
 func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 
-	fakeClientset := &mocks.Client{}
-	prepareClientMock(fakeClientset)
+	c := newQuarantineClient()
+	c.Nodes = []TestClientNode{
+		{Name: "foo", Drain: true}, {Name: "bar", Drain: false}, {Name: "baz", Drain: false},
+	}
+
+	c.Namespaces = []TestClientNamespace{
+		{
+			Name: "foo",
+			Daemonsets: []TestClientResource{
+				{
+					Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"ops.soer3n.info/key=value"}, FieldSelector: []string{"spec.nodeName=bar"},
+				},
+			},
+			Deployments: []TestClientResource{
+				{
+					Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"ops.soer3n.info/key=value"}, FieldSelector: []string{"spec.nodeName=bar"},
+				},
+			},
+			Pods: []*TestClientPod{
+				{
+					Resource: TestClientResource{
+						Name: "quarantine-debug-foo", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"key=value", "ops.soer3n.info/key=value", "kubernetes.io/hostname=foo", "ops.soer3n.info/quarantine=true"}, FieldSelector: []string{"spec.nodeName=bar"}},
+				},
+				{
+					Resource: TestClientResource{
+						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{"ops.soer3n.info/quarantine=true"}, FieldSelector: []string{"spec.nodeName=bar"},
+					},
+				},
+			},
+		},
+		{
+			Name: "bar",
+			Pods: []*TestClientPod{
+				{
+					Resource: TestClientResource{
+						Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"spec.foo=baz"}, FieldSelector: []string{""}},
+				},
+				{
+					Resource: TestClientResource{
+						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{""}, FieldSelector: []string{"spec.bar=foo"},
+					},
+				},
+			},
+		},
+	}
+
+	c.prepare()
 
 	return []tests.QuarantineTestCase{
 		{
@@ -466,7 +570,7 @@ func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 						},
 						Logger: ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client:              fakeClientset,
+							Client:              c.FakeClient,
 							IgnoreAllDaemonSets: true,
 							DisableEviction:     false,
 							DeleteEmptyDirData:  true,
@@ -486,7 +590,7 @@ func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 				Debug: q.Debug{
 					Enabled: true,
 				},
-				Client:     fakeClientset,
+				Client:     c.FakeClient,
 				Conditions: []metav1.Condition{},
 			},
 		},
@@ -495,8 +599,53 @@ func GetQuarantineStopStructs() []tests.QuarantineTestCase {
 
 func GetQuarantineUpdateStructs() []tests.QuarantineTestCase {
 
-	fakeClientset := &mocks.Client{}
-	prepareClientMock(fakeClientset)
+	c := newQuarantineClient()
+	c.Nodes = []TestClientNode{
+		{Name: "foo", Drain: true}, {Name: "bar", Drain: false}, {Name: "baz", Drain: false},
+	}
+
+	c.Namespaces = []TestClientNamespace{
+		{
+			Name: "foo",
+			Daemonsets: []TestClientResource{
+				{
+					Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"ops.soer3n.info/key=value"}, FieldSelector: []string{"spec.nodeName=bar"},
+				},
+			},
+			Deployments: []TestClientResource{
+				{
+					Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"ops.soer3n.info/key=value"}, FieldSelector: []string{"spec.nodeName=bar"},
+				},
+			},
+			Pods: []*TestClientPod{
+				{
+					Resource: TestClientResource{
+						Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"key=value", "ops.soer3n.info/key=value", "kubernetes.io/hostname=foo", "ops.soer3n.info/quarantine=true"}, FieldSelector: []string{"spec.nodeName=bar"}},
+				},
+				{
+					Resource: TestClientResource{
+						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{"ops.soer3n.info/quarantine=true"}, FieldSelector: []string{"spec.nodeName=bar"},
+					},
+				},
+			},
+		},
+		{
+			Name: "bar",
+			Pods: []*TestClientPod{
+				{
+					Resource: TestClientResource{
+						Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"spec.foo=baz"}, FieldSelector: []string{""}},
+				},
+				{
+					Resource: TestClientResource{
+						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{""}, FieldSelector: []string{"spec.bar=foo"},
+					},
+				},
+			},
+		},
+	}
+
+	c.prepare()
 
 	return []tests.QuarantineTestCase{
 		{
@@ -522,7 +671,7 @@ func GetQuarantineUpdateStructs() []tests.QuarantineTestCase {
 						},
 						Logger: ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client:              fakeClientset,
+							Client:              c.FakeClient,
 							IgnoreAllDaemonSets: true,
 							DisableEviction:     false,
 							DeleteEmptyDirData:  true,
@@ -558,7 +707,7 @@ func GetQuarantineUpdateStructs() []tests.QuarantineTestCase {
 						},
 						Logger: ctrl.Log.WithName("test"),
 						Flags: &drain.Helper{
-							Client:              fakeClientset,
+							Client:              c.FakeClient,
 							IgnoreAllDaemonSets: true,
 							DisableEviction:     false,
 							DeleteEmptyDirData:  true,

@@ -31,6 +31,7 @@ type TestClientResource struct {
 	Node          string
 	Watch         bool
 	Isolated      bool
+	GracePeriod   bool
 	Taint         bool
 	Error         TestClientError
 	ListSelector  []string
@@ -39,7 +40,7 @@ type TestClientResource struct {
 
 type TestClientPod struct {
 	Resource TestClientResource
-	pod      corev1.Pod
+	pod      *corev1.Pod
 }
 
 type TestClientError struct {
@@ -50,4 +51,14 @@ type TestClientError struct {
 type TestClientSelectors struct {
 	ListSelectors  map[string][]string
 	FieldSelectors map[string][]string
+}
+
+type TestClientSelectorValues struct {
+	Value string
+	Pods  []corev1.Pod
+}
+
+type TestClientSelectorStruct struct {
+	ListSelectors  map[string]TestClientSelectorValues
+	FieldSelectors map[string]TestClientSelectorValues
 }
