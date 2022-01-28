@@ -143,7 +143,7 @@ func (ds Daemonset) isAlreadyIsolated(c kubernetes.Interface, node, namespace st
 	core := c.CoreV1()
 
 	listOpts := metav1.ListOptions{
-		LabelSelector: quarantinePodLabelPrefix + quarantinePodLabelKey + "=" + quarantinePodLabelValue,
+		LabelSelector: QuarantinePodLabelPrefix + QuarantinePodLabelKey + "=" + quarantinePodLabelValue,
 	}
 
 	if podList, err = core.Pods(namespace).List(context.TODO(), listOpts); err != nil {
@@ -202,7 +202,7 @@ func (ds Daemonset) getLabelSelectorAsString(podMatchLabels *metav1.LabelSelecto
 	selectorStringList := []string{}
 
 	for k, v := range podMatchLabels.MatchLabels {
-		selectorStringList = append(selectorStringList, quarantinePodLabelPrefix+k+"="+v)
+		selectorStringList = append(selectorStringList, QuarantinePodLabelPrefix+k+"="+v)
 	}
 
 	return strings.Join(selectorStringList, ","), nil

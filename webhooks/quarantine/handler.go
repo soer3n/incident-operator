@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/soer3n/incident-operator/api/v1alpha1"
+	"github.com/soer3n/incident-operator/internal/quarantine"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -18,7 +19,8 @@ import (
 
 var err error
 var pod *corev1.Pod
-var obj *v1alpha1.Quarantine
+
+// var obj *v1alpha1.Quarantine
 
 const quarantineControllerLabelKey = "component"
 const quarantineControllerLabelValue = "incident-controller-manager"
@@ -26,15 +28,17 @@ const quarantineControllerLabelValue = "incident-controller-manager"
 // Handle handles admission requests.
 func (h *QuarantineValidateHandler) Handle(ctx context.Context, req admission.Request) admission.Response {
 
+	obj := &v1alpha1.Quarantine{}
+
 	if obj, err = h.manageObject(req); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
 	switch t := req.Operation; t {
 	case admissionv1.Create:
-		err = h.Validate()
+		err = h.Validate(obj)
 	case admissionv1.Update:
-		err = h.Validate()
+		err = h.Validate(obj)
 	}
 
 	if err != nil {
@@ -47,27 +51,32 @@ func (h *QuarantineValidateHandler) Handle(ctx context.Context, req admission.Re
 // Handle handles admission requests.
 func (h *QuarantineMutateHandler) Handle(ctx context.Context, req admission.Request) admission.Response {
 
-	oldObj := &v1alpha1.Quarantine{}
+	var rawObj []byte
 
-	if oldObj, err = h.manageObject(req); err != nil {
+	var obj, oldObj *v1alpha1.Quarantine
+
+	if obj, oldObj, err = h.manageObject(req); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
 	switch t := req.Operation; t {
 	case admissionv1.Update:
-		err = h.MutateUpdate(oldObj)
+		err = h.MutateUpdate(obj, oldObj)
 	}
 
 	if err != nil {
 		return admission.Denied(err.Error())
 	}
 
-	rawObj, _ := json.Marshal(obj)
+	if rawObj, err = json.Marshal(obj); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
 	return admission.PatchResponseFromRaw(rawObj, rawObj)
 }
 
 // Validate implements webhook.Validator so a webhook will be registered for the type
-func (h *QuarantineValidateHandler) Validate() error {
+func (h *QuarantineValidateHandler) Validate(obj *v1alpha1.Quarantine) error {
 	h.Log.Info("validate create", "name", obj.Name)
 
 	if pod, err = h.getControllerPod(); err != nil {
@@ -75,7 +84,7 @@ func (h *QuarantineValidateHandler) Validate() error {
 		return err
 	}
 
-	if ok := h.controllerShouldBeRescheduled(pod.Spec.NodeName); ok {
+	if ok := h.controllerShouldBeRescheduled(pod.Spec.NodeName, obj.Spec.Nodes); ok {
 		h.Log.Info("controller pod is on a node marked for isolation")
 		return errors.New("controller pod is on a node marked for isolation")
 	}
@@ -86,14 +95,12 @@ func (h *QuarantineValidateHandler) Validate() error {
 }
 
 // MutateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (h *QuarantineMutateHandler) MutateUpdate(old runtime.Object) error {
+func (h *QuarantineMutateHandler) MutateUpdate(obj, old *v1alpha1.Quarantine) error {
 	h.Log.Info("validate update", "name", obj.Name)
 
-	markedNodes := []*v1alpha1.Node{}
+	markedNodes := []string{}
 
-	oo := old.(*v1alpha1.Quarantine)
-
-	for _, on := range oo.Spec.Nodes {
+	for _, on := range old.Spec.Nodes {
 
 		isMarked := true
 		for _, cn := range obj.Spec.Nodes {
@@ -104,19 +111,24 @@ func (h *QuarantineMutateHandler) MutateUpdate(old runtime.Object) error {
 		}
 
 		if isMarked {
-			markedNodes = append(markedNodes, &on)
+			markedNodes = append(markedNodes, on.Name)
 		}
 	}
 
 	h.Log.Info("marked:", "nodes", markedNodes)
 
-	// TODO(user): fill in your validation logic upon object update.
+	if obj.ObjectMeta.Annotations == nil {
+		obj.ObjectMeta.Annotations = map[string]string{}
+	}
+
+	obj.ObjectMeta.Annotations[quarantine.QuarantinePodLabelPrefix+quarantine.QuarantineNodeRemoveLabel] = strings.Join(markedNodes, ",")
+
 	return nil
 }
 
-func (h *QuarantineValidateHandler) controllerShouldBeRescheduled(nodeName string) bool {
+func (h *QuarantineValidateHandler) controllerShouldBeRescheduled(nodeName string, nodes []v1alpha1.Node) bool {
 
-	for _, n := range obj.Spec.Nodes {
+	for _, n := range nodes {
 		if n.Name == nodeName {
 			return true
 		}
@@ -129,22 +141,27 @@ func (h *QuarantineValidateHandler) manageObject(req admission.Request) (*v1alph
 
 	quarantine := &v1alpha1.Quarantine{}
 
-	if err := h.Decoder.Decode(req, quarantine); err != nil {
+	if err := h.Decoder.DecodeRaw(req.Object, quarantine); err != nil {
 		return quarantine, err
 	}
 
 	return quarantine, nil
 }
 
-func (h *QuarantineMutateHandler) manageObject(req admission.Request) (*v1alpha1.Quarantine, error) {
+func (h *QuarantineMutateHandler) manageObject(req admission.Request) (*v1alpha1.Quarantine, *v1alpha1.Quarantine, error) {
 
 	quarantine := &v1alpha1.Quarantine{}
+	oldQuarantine := &v1alpha1.Quarantine{}
 
-	if err := h.Decoder.Decode(req, quarantine); err != nil {
-		return quarantine, err
+	if err := h.Decoder.DecodeRaw(req.Object, quarantine); err != nil {
+		return quarantine, oldQuarantine, err
 	}
 
-	return quarantine, nil
+	if err := h.Decoder.DecodeRaw(req.OldObject, oldQuarantine); err != nil {
+		return quarantine, oldQuarantine, err
+	}
+
+	return quarantine, oldQuarantine, nil
 }
 
 func (h *QuarantineValidateHandler) getControllerPod() (*corev1.Pod, error) {

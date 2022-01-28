@@ -130,7 +130,7 @@ func (d Deployment) removeToleration(c kubernetes.Interface) error {
 			Op:   "add",
 			Path: "/metadata/labels",
 			Value: map[string]string{
-				quarantinePodLabelPrefix + quarantinePodLabelKey: quarantinePodLabelValue,
+				QuarantinePodLabelPrefix + QuarantinePodLabelKey: quarantinePodLabelValue,
 			},
 		},
 	}
@@ -154,7 +154,7 @@ func (d Deployment) isAlreadyIsolated(c kubernetes.Interface, node, namespace st
 	core := c.CoreV1()
 
 	listOpts := metav1.ListOptions{
-		LabelSelector: quarantinePodLabelPrefix + quarantinePodLabelKey + "=" + quarantinePodLabelValue,
+		LabelSelector: QuarantinePodLabelPrefix + QuarantinePodLabelKey + "=" + quarantinePodLabelValue,
 	}
 
 	if podList, err = core.Pods(namespace).List(context.TODO(), listOpts); err != nil {
@@ -186,7 +186,7 @@ func (d Deployment) isAlreadyManaged(c kubernetes.Interface, node, namespace str
 	selectorStringList := []string{}
 
 	for k, v := range obj.Spec.Selector.MatchLabels {
-		selectorStringList = append(selectorStringList, quarantinePodLabelPrefix+k+"="+v)
+		selectorStringList = append(selectorStringList, QuarantinePodLabelPrefix+k+"="+v)
 	}
 
 	selectorStringList = append(selectorStringList, "kubernetes.io/hostname="+node)

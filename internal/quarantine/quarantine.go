@@ -67,8 +67,8 @@ func New(s *v1alpha1.Quarantine, c kubernetes.Interface, f util.Factory, reqLogg
 	nodesToRemove := []string{}
 	nodesToRemoveObj := []*Node{}
 
-	if _, ok := s.ObjectMeta.Annotations[quarantinePodLabelPrefix+quarantineNodeRemoveLabel]; ok {
-		nodesToRemove = strings.Split(s.ObjectMeta.Annotations[quarantinePodLabelPrefix+quarantineNodeRemoveLabel], ",")
+	if _, ok := s.ObjectMeta.Annotations[QuarantinePodLabelPrefix+QuarantineNodeRemoveLabel]; ok {
+		nodesToRemove = strings.Split(s.ObjectMeta.Annotations[QuarantinePodLabelPrefix+QuarantineNodeRemoveLabel], ",")
 	}
 
 	for _, r := range nodesToRemove {
@@ -107,7 +107,7 @@ func (q Quarantine) getNodeStruct(name, debugImage, debugNamespace string, isola
 			IgnoreAllDaemonSets: true,
 			DisableEviction:     false,
 			DeleteEmptyDirData:  true,
-			PodSelector:         "!" + quarantinePodLabelPrefix + quarantinePodSelector,
+			PodSelector:         "!" + QuarantinePodLabelPrefix + quarantinePodSelector,
 			Force:               false,
 			IgnoreErrors:        false,
 			Ctx:                 context.TODO(),

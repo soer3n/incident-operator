@@ -12,9 +12,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-const quarantinePodLabelPrefix = "ops.soer3n.info/"
-const quarantinePodLabelKey = "quarantine"
-const quarantineNodeRemoveLabel = "revert"
+const QuarantinePodLabelPrefix = "ops.soer3n.info/"
+const QuarantinePodLabelKey = "quarantine"
+const QuarantineNodeRemoveLabel = "revert"
 const quarantinePodLabelValue = "true"
 
 func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName, namespace string, updateLabels, addToleration bool) error {
@@ -47,7 +47,7 @@ func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName
 
 			if updateLabels {
 				labels := map[string]string{}
-				labels[quarantinePodLabelPrefix+quarantinePodLabelKey] = quarantinePodLabelValue
+				labels[QuarantinePodLabelPrefix+QuarantinePodLabelKey] = quarantinePodLabelValue
 				currentPod.ObjectMeta.Labels = labels
 			}
 
@@ -69,7 +69,7 @@ func updatePod(c kubernetes.Interface, matchedLabels map[string]string, nodeName
 }
 
 func podIsNotInQuarantine(pod corev1.Pod) bool {
-	if _, ok := pod.ObjectMeta.Labels[quarantinePodLabelPrefix+quarantinePodLabelKey]; !ok {
+	if _, ok := pod.ObjectMeta.Labels[QuarantinePodLabelPrefix+QuarantinePodLabelKey]; !ok {
 		return true
 	}
 
@@ -82,7 +82,7 @@ func cleanupIsolatedPods(c kubernetes.Interface) error {
 	var err error
 
 	listOpts := metav1.ListOptions{
-		LabelSelector: quarantinePodLabelPrefix + quarantinePodLabelKey + "=" + quarantinePodLabelValue,
+		LabelSelector: QuarantinePodLabelPrefix + QuarantinePodLabelKey + "=" + quarantinePodLabelValue,
 	}
 
 	if pods, err = c.CoreV1().Pods("").List(context.TODO(), listOpts); err != nil {
