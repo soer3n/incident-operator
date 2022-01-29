@@ -51,9 +51,9 @@ func (h *QuarantineValidateHandler) Handle(ctx context.Context, req admission.Re
 // Handle handles admission requests.
 func (h *QuarantineMutateHandler) Handle(ctx context.Context, req admission.Request) admission.Response {
 
-	var rawObj []byte
+	var rawObj, rawPatchedObj []byte
 
-	var obj, oldObj *v1alpha1.Quarantine
+	var obj, oldObj, patchedObj *v1alpha1.Quarantine
 
 	if obj, oldObj, err = h.manageObject(req); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
@@ -61,7 +61,7 @@ func (h *QuarantineMutateHandler) Handle(ctx context.Context, req admission.Requ
 
 	switch t := req.Operation; t {
 	case admissionv1.Update:
-		err = h.MutateUpdate(obj, oldObj)
+		patchedObj, err = h.MutateUpdate(obj, oldObj)
 	}
 
 	if err != nil {
@@ -72,12 +72,16 @@ func (h *QuarantineMutateHandler) Handle(ctx context.Context, req admission.Requ
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	return admission.PatchResponseFromRaw(rawObj, rawObj)
+	if rawPatchedObj, err = json.Marshal(patchedObj); err != nil {
+		return admission.Errored(http.StatusBadRequest, err)
+	}
+
+	return admission.PatchResponseFromRaw(rawObj, rawPatchedObj)
 }
 
 // Validate implements webhook.Validator so a webhook will be registered for the type
 func (h *QuarantineValidateHandler) Validate(obj *v1alpha1.Quarantine) error {
-	h.Log.Info("validate create", "name", obj.Name)
+	h.Log.Info("validate", "name", obj.Name)
 
 	if pod, err = h.getControllerPod(); err != nil {
 		h.Log.Info("error on getting controller pod")
@@ -95,8 +99,10 @@ func (h *QuarantineValidateHandler) Validate(obj *v1alpha1.Quarantine) error {
 }
 
 // MutateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (h *QuarantineMutateHandler) MutateUpdate(obj, old *v1alpha1.Quarantine) error {
-	h.Log.Info("validate update", "name", obj.Name)
+func (h *QuarantineMutateHandler) MutateUpdate(obj, old *v1alpha1.Quarantine) (*v1alpha1.Quarantine, error) {
+	h.Log.Info("mutate update", "name", obj.Name)
+
+	patched := obj.DeepCopy()
 
 	markedNodes := []string{}
 
@@ -115,15 +121,20 @@ func (h *QuarantineMutateHandler) MutateUpdate(obj, old *v1alpha1.Quarantine) er
 		}
 	}
 
-	h.Log.Info("marked:", "nodes", markedNodes)
-
-	if obj.ObjectMeta.Annotations == nil {
-		obj.ObjectMeta.Annotations = map[string]string{}
+	if len(markedNodes) == 0 {
+		h.Log.Info("no nodes to remove from quarantine")
+		return patched, nil
 	}
 
-	obj.ObjectMeta.Annotations[quarantine.QuarantinePodLabelPrefix+quarantine.QuarantineNodeRemoveLabel] = strings.Join(markedNodes, ",")
+	h.Log.Info("marked for removal from quarantine:", "nodes", markedNodes)
 
-	return nil
+	if obj.ObjectMeta.Annotations == nil {
+		patched.ObjectMeta.Annotations = map[string]string{}
+	}
+
+	patched.ObjectMeta.Annotations[quarantine.QuarantinePodLabelPrefix+quarantine.QuarantineNodeRemoveLabel] = strings.Join(markedNodes, ",")
+
+	return patched, nil
 }
 
 func (h *QuarantineValidateHandler) controllerShouldBeRescheduled(nodeName string, nodes []v1alpha1.Node) bool {

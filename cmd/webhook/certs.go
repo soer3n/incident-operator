@@ -40,7 +40,10 @@ func NewWebhookCreateCertsCmd() *cobra.Command {
 			namespace, _ := cmd.Flags().GetString("namespace")
 			local, _ := cmd.Flags().GetBool("local")
 			certDir, _ := cmd.Flags().GetString("certDir")
-			log.Printf("%v", webhook.InstallWebhook(svc, namespace, certDir, local))
+
+			if err := webhook.InstallWebhook(svc, namespace, certDir, local); err != nil {
+				log.Fatal(err)
+			}
 		},
 	}
 

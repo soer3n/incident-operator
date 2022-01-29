@@ -102,6 +102,10 @@ var _ = Context("Create a quarantine resource", func() {
 			By("updating an existing quarantine resource ...")
 			quarantineKind.Spec.Nodes = []v1alpha1.Node{
 				{
+					Name:    quarantineNodeName,
+					Rescale: false,
+				},
+				{
 					Name:    quarantineFailNodeName,
 					Rescale: false,
 				},
@@ -109,6 +113,27 @@ var _ = Context("Create a quarantine resource", func() {
 
 			err = testClient.Update(context.Background(), quarantineKind)
 			Expect(err).To(HaveOccurred(), "should fail due to validation")
+
+			deployment = &v1alpha1.Quarantine{}
+
+			Eventually(
+				GetResourceFunc(context.Background(), client.ObjectKey{Name: quarantineKindName, Namespace: namespace}, deployment),
+				time.Second*20, time.Millisecond*1500).Should(BeNil())
+
+			By("updating an existing quarantine resource ...")
+			quarantineKind.Spec.Nodes = []v1alpha1.Node{
+				{
+					Name:    quarantineNodeName,
+					Rescale: false,
+				},
+				{
+					Name:    quarantineNextNodeName,
+					Rescale: false,
+				},
+			}
+
+			err = testClient.Update(context.Background(), quarantineKind)
+			Expect(err).NotTo(HaveOccurred(), "should fail due to validation")
 
 			deployment = &v1alpha1.Quarantine{}
 

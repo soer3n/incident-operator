@@ -87,11 +87,11 @@ func (n *Node) update() error {
 		if err := n.deschedulePods(); err != nil {
 			return err
 		}
+	}
 
-		n.Logger.Info("evict daemonset pods...")
-		if err := n.evictPods(); err != nil {
-			return err
-		}
+	n.Logger.Info("evict daemonset pods...")
+	if err := n.evictPods(); err != nil {
+		return err
 	}
 
 	return nil
@@ -262,6 +262,7 @@ func (n Node) enableScheduling() error {
 	n.Logger.Info("uncordon...")
 
 	if err := drain.RunCordonOrUncordon(n.Flags, nodeObj, false); err != nil {
+		n.Logger.Error(err, "reschedule workloads")
 		return err
 	}
 
@@ -325,6 +326,7 @@ func (n Node) removeTaint() error {
 
 func (n Node) deschedulePods() error {
 	if err := drain.RunNodeDrain(n.Flags, n.Name); err != nil {
+		n.Logger.Error(err, "deschedule workloads")
 		return err
 	}
 
@@ -343,7 +345,7 @@ func (n Node) getNodeAPIObject() *corev1.Node {
 	opts := metav1.GetOptions{}
 	core := n.Flags.Client.CoreV1()
 	if nodeObj, err = core.Nodes().Get(context.Background(), n.Name, opts); err != nil {
-		println(err.Error())
+		n.Logger.Error(err, "get node")
 	}
 
 	return nodeObj
@@ -356,6 +358,7 @@ func (n Node) updateNodeAPIObject(nodeObj *corev1.Node) error {
 	opts := metav1.UpdateOptions{}
 
 	if _, err = n.Flags.Client.CoreV1().Nodes().Update(context.TODO(), nodeObj, opts); err != nil {
+		n.Logger.Error(err, "update node")
 		return err
 	}
 
@@ -369,9 +372,6 @@ func (n Node) waitForUpdate() error {
 		LabelSelector:  "kubernetes.io/hostname=" + n.Name,
 		TimeoutSeconds: &timeout,
 	}
-
-	apps := n.Flags.Client.AppsV1()
-	_ = apps.Deployments("")
 
 	w, err := n.Flags.Client.CoreV1().Nodes().Watch(context.TODO(), listOpts)
 

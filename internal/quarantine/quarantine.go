@@ -60,6 +60,7 @@ func New(s *v1alpha1.Quarantine, c kubernetes.Interface, f util.Factory, reqLogg
 		temp.mergeResources(s.Spec.Resources)
 		temp.parseFlags(s.Spec.Flags, n.Flags)
 		nodes = append(nodes, temp)
+		q.Logger.Info("node added to cr", "node", n.Name)
 	}
 
 	q.Nodes = nodes
@@ -74,6 +75,7 @@ func New(s *v1alpha1.Quarantine, c kubernetes.Interface, f util.Factory, reqLogg
 	for _, r := range nodesToRemove {
 		temp := q.getNodeStruct(r, debugImage, debugNamespace, false, f)
 		nodesToRemoveObj = append(nodesToRemoveObj, temp)
+		q.Logger.Info("node marked to remove", "node", temp.Name)
 	}
 
 	q.MarkedNodes = nodesToRemoveObj
@@ -179,6 +181,7 @@ func (q *Quarantine) Update() error {
 		}
 
 		if err := n.remove(); err != nil {
+			q.Logger.Info("remove marked node", "node", n.Name)
 			return err
 		}
 	}
@@ -190,6 +193,7 @@ func (q *Quarantine) Update() error {
 	}
 
 	for _, n := range q.Nodes {
+		q.Logger.Info("update node", "node", n.Name)
 		if err := n.update(); err != nil {
 			return err
 		}

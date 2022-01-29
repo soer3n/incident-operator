@@ -168,7 +168,10 @@ func (r *QuarantineReconciler) syncStatus(ctx context.Context, instance *v1alpha
 
 	if meta.IsStatusConditionPresentAndEqual(instance.Status.Conditions, quarantineStatusKey, stats) && instance.Status.Conditions[0].Message == message {
 		reqLogger.Info("Don't reconcile quarantine resource after sync.")
-		return ctrl.Result{}, nil
+		return ctrl.Result{
+			Requeue:      true,
+			RequeueAfter: 10 * time.Second,
+		}, nil
 	}
 
 	condition := metav1.Condition{Type: quarantineStatusKey, Status: stats, LastTransitionTime: metav1.Time{Time: time.Now()}, Reason: reason, Message: message}

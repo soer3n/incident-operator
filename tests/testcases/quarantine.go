@@ -609,22 +609,22 @@ func GetQuarantineUpdateStructs() []tests.QuarantineTestCase {
 			Name: "foo",
 			Daemonsets: []TestClientResource{
 				{
-					Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"ops.soer3n.info/key=value"}, FieldSelector: []string{"spec.nodeName=bar"},
+					Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"ops.soer3n.info/key=value"}, FieldSelector: []string{"spec.nodeName=foo"},
 				},
 			},
 			Deployments: []TestClientResource{
 				{
-					Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"ops.soer3n.info/key=value"}, FieldSelector: []string{"spec.nodeName=bar"},
+					Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"ops.soer3n.info/key=value"}, FieldSelector: []string{"spec.nodeName=foo"},
 				},
 			},
 			Pods: []*TestClientPod{
 				{
 					Resource: TestClientResource{
-						Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"key=value", "ops.soer3n.info/key=value", "kubernetes.io/hostname=foo", "ops.soer3n.info/quarantine=true"}, FieldSelector: []string{"spec.nodeName=bar"}},
+						Name: "quarantine-debug", Node: "foo", Isolated: false, Watch: true, Taint: false, ListSelector: []string{"key=value", "ops.soer3n.info/key=value", "kubernetes.io/hostname=foo", "ops.soer3n.info/quarantine=true"}, FieldSelector: []string{"spec.nodeName=foo"}},
 				},
 				{
 					Resource: TestClientResource{
-						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{"ops.soer3n.info/quarantine=true"}, FieldSelector: []string{"spec.nodeName=bar"},
+						Name: "foo", Node: "foo", Isolated: false, Watch: true, Taint: true, ListSelector: []string{"ops.soer3n.info/quarantine=true"}, FieldSelector: []string{"spec.nodeName=foo"},
 					},
 				},
 			},
