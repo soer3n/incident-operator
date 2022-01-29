@@ -317,7 +317,7 @@ func (n *TestClientNamespace) parsePodList(podv1Mock *mocks.PodV1) TestClientSel
 	}
 }
 
-func (n *TestClientNamespace) setPodList(podv1Mock *mocks.PodV1, labelSelectorMap TestClientSelectorStruct) error {
+func (n *TestClientNamespace) setPodList(podv1Mock *mocks.PodV1, labelSelectorMap TestClientSelectorStruct) {
 	for k, v := range labelSelectorMap.ListSelectors {
 
 		podList := corev1.PodList{
@@ -340,8 +340,6 @@ func (n *TestClientNamespace) setPodList(podv1Mock *mocks.PodV1, labelSelectorMa
 			}).Return(podList, nil)
 		}
 	}
-
-	return nil
 }
 
 func (t *TestClientQuarantine) setDeployments(appsv1Mock *mocks.AppsV1) {
