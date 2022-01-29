@@ -11,7 +11,7 @@
             "mode": "test",
             "program": "${workspaceFolder}/tests/e2e/controller",
             "env": {
-                "ACK_GINKGO_DEPRECATIONS": "1.16.4"
+                "KUBECONFIG": "${workspaceFolder}/kind-conf"
             }
         },
         {

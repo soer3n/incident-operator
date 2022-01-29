@@ -60,9 +60,9 @@ var cancel context.CancelFunc
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecsWithDefaultAndCustomReporters(t,
+	RunSpecs(t,
 		"Controller Suite",
-		[]Reporter{})
+	)
 }
 
 var _ = BeforeSuite(func() {
