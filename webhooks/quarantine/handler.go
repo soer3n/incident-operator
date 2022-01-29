@@ -28,7 +28,7 @@ const quarantineControllerLabelValue = "incident-controller-manager"
 // Handle handles admission requests.
 func (h *QuarantineValidateHandler) Handle(ctx context.Context, req admission.Request) admission.Response {
 
-	obj := &v1alpha1.Quarantine{}
+	var obj *v1alpha1.Quarantine
 
 	if obj, err = h.manageObject(req); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)

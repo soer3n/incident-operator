@@ -344,7 +344,7 @@ func (n *TestClientNamespace) setPodList(podv1Mock *mocks.PodV1, labelSelectorMa
 	return nil
 }
 
-func (t *TestClientQuarantine) setDeployments(appsv1Mock *mocks.AppsV1) error {
+func (t *TestClientQuarantine) setDeployments(appsv1Mock *mocks.AppsV1) {
 
 	var list []string
 
@@ -385,10 +385,9 @@ func (t *TestClientQuarantine) setDeployments(appsv1Mock *mocks.AppsV1) error {
 	}
 
 	appsv1Mock.On("Deployments", "").Return(d)
-	return nil
 }
 
-func (t *TestClientQuarantine) setDaemonsets(appsv1Mock *mocks.AppsV1) error {
+func (t *TestClientQuarantine) setDaemonsets(appsv1Mock *mocks.AppsV1) {
 
 	ds := &mocks.DaemonsetV1{}
 
@@ -440,10 +439,9 @@ func (t *TestClientQuarantine) setDaemonsets(appsv1Mock *mocks.AppsV1) error {
 	}
 
 	appsv1Mock.On("DaemonSets", "").Return(ds)
-	return nil
 }
 
-func (t *TestClientQuarantine) setDiscoveryClient() error {
+func (t *TestClientQuarantine) setDiscoveryClient() {
 
 	discoveryMock := &mocks.Discovery{}
 
@@ -469,5 +467,4 @@ func (t *TestClientQuarantine) setDiscoveryClient() error {
 	}, nil)
 
 	t.FakeClient.On("Discovery").Return(discoveryMock)
-	return nil
 }
