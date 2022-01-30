@@ -5,7 +5,7 @@ import (
 	"errors"
 	"log"
 
-	"github.com/soer3n/yaho/pkg/client"
+	"github.com/soer3n/incident-operator/internal/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -14,7 +14,7 @@ func DeleteWebhook(namespace string) error {
 
 	var err error
 
-	c := client.New().TypedClient
+	c := utils.GetTypedKubernetesClient()
 
 	log.Print("deleting secrets...")
 

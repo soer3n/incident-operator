@@ -3,6 +3,12 @@ package utils
 import (
 	"fmt"
 	"os"
+
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // Contains represents func for checking if a string is in a list of strings
@@ -38,4 +44,58 @@ func WriteFile(name, path string, content []byte) error {
 
 	fmt.Println(l, "bytes written successfully")
 	return nil
+}
+
+func getClusterConfig() *rest.Config {
+
+	restConfig, err := rest.InClusterConfig()
+
+	if err != nil {
+
+		configLoadRules := clientcmd.NewDefaultClientConfigLoadingRules()
+		config, _ := configLoadRules.Load()
+		copy := *config
+
+		clientConfig := clientcmd.NewDefaultClientConfig(copy, &clientcmd.ConfigOverrides{})
+		restConfig, err = clientConfig.ClientConfig()
+
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+
+	return restConfig
+}
+
+func GetTypedKubernetesClient() *kubernetes.Clientset {
+
+	config := getClusterConfig()
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		panic(err)
+	}
+
+	return clientset
+}
+
+func GetDynamicKubernetesClient() dynamic.Interface {
+
+	config := getClusterConfig()
+	client, err := dynamic.NewForConfig(config)
+	if err != nil {
+		panic(err)
+	}
+
+	return client
+}
+
+func GetDiscoveryKubernetesClient() *discovery.DiscoveryClient {
+
+	config := getClusterConfig()
+	client, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		panic(err)
+	}
+
+	return client
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 
-	"github.com/soer3n/yaho/pkg/client"
 	admissionv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -64,7 +63,7 @@ func (wc *Cert) createLocalWebhookCerts(certDir string) error {
 func (wc *Cert) createClusterWebhookCerts(namespace string) error {
 	log.Print("generating cert files...")
 
-	typedClient := client.New().TypedClient
+	typedClient := utils.GetTypedKubernetesClient()
 
 	log.Print("create cert secret...")
 	if err := wc.deploySecret(namespace, typedClient); err != nil {

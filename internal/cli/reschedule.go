@@ -9,7 +9,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/soer3n/yaho/pkg/client"
+	"github.com/soer3n/incident-operator/internal/utils"
 	"sigs.k8s.io/descheduler/pkg/descheduler/evictions"
 )
 
@@ -29,9 +29,8 @@ func RescheduleQuarantineController(excludedNodes []string) error {
 	var pod *corev1.Pod
 	var node *corev1.Node
 
-	utilsClient := client.New()
-	typedClient := utilsClient.TypedClient
-	discoveryClient := utilsClient.DiscoverClient
+	typedClient := utils.GetTypedKubernetesClient()
+	discoveryClient := utils.GetDiscoveryKubernetesClient()
 
 	if pod, err = getControllerPod(typedClient); err != nil {
 		return err
