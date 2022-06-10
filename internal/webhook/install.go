@@ -19,12 +19,12 @@ func InstallWebhook(subj, namespace, certDir string, local bool) error {
 	log.Print("generating ca bundle...")
 	wc := &Cert{}
 
-	if err := wc.generateWebhookCert(); err != nil {
+	if err := wc.GenerateWebhookCert(); err != nil {
 		return err
 	}
 
 	log.Print("generating webhook server cert...")
-	_ = wc.create(subj)
+	_ = wc.Create(subj)
 
 	if local {
 		if err := wc.createLocalWebhookCerts(certDir); err != nil {

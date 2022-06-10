@@ -18,7 +18,7 @@ const (
 	commonName = "Admission Controller Webhook"
 )
 
-func (w *Cert) generateWebhookCert() error {
+func (w *Cert) GenerateWebhookCert() error {
 
 	// Generate RSA key.
 	key, err := rsa.GenerateKey(rand.Reader, bitSize)
@@ -76,7 +76,7 @@ func (w *Cert) getCertTemplate() *x509.Certificate {
 	}
 }
 
-func (w *Cert) create(CommonName string) error {
+func (w *Cert) Create(CommonName string) error {
 
 	localIP := net.ParseIP("127.0.0.1")
 

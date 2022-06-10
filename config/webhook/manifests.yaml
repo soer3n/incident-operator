@@ -1,16 +1,20 @@
 
 ---
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  creationTimestamp: null
   name: validating-webhook-configuration
+  namespace: "{{.Namespace}}"
 webhooks:
 - admissionReviewVersions:
   - v1
   - v1beta1
   clientConfig:
-    url: "https://127.0.0.1:9443/validate-ops-soer3n-info-v1alpha1-quarantine"
+    # url: "https://127.0.0.1:9443/validate-ops-soer3n-info-v1alpha1-quarantine"
+    service:
+      namespace: "{{.Namespace}}"
+      name: "webhook-service"
+    caBundle: "{{.Certs.Ca}}"
   failurePolicy: Fail
   name: vquarantine.kb.io
   rules:
@@ -20,6 +24,36 @@ webhooks:
     - v1alpha1
     operations:
     - CREATE
+    - UPDATE
+    resources:
+    - quarantines
+  sideEffects: None
+
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  namespace: "{{.Namespace}}"
+  name: mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    # url: "https://127.0.0.1:9443/validate-ops-soer3n-info-v1alpha1-quarantine"
+    service:
+      namespace: "{{.Namespace}}"
+      name: "webhook-service"
+    caBundle: "{{.Certs.Ca}}"
+  failurePolicy: Fail
+  name: vquarantine.kb.io
+  rules:
+  - apiGroups:
+    - ops.soer3n.info
+    apiVersions:
+    - v1alpha1
+    operations:
     - UPDATE
     resources:
     - quarantines
