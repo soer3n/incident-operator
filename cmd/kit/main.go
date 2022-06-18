@@ -45,6 +45,11 @@ func NewInstallCmd(logger logrus.FieldLogger) *cobra.Command {
 
 			c := cli.New(logger)
 
+			if err := c.GenerateWebhookCerts(); err != nil {
+				logger.Error(err)
+				return
+			}
+
 			if err := c.InstallResources(); err != nil {
 				logger.Error(err)
 			}
