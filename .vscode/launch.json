@@ -74,6 +74,7 @@
             "type": "go",
             "request": "launch",
             "mode": "debug",
+            "console": "integratedTerminal",
             // "debugAdapter": "legacy",
             "program": "${workspaceFolder}/cmd/kit/main.go",
             "args": ["prepare"]

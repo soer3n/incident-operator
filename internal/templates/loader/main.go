@@ -135,25 +135,6 @@ func LoadConfig(path string, logger logrus.FieldLogger) (*Config, error) {
 
 	}
 
-	logger.Infoln("generating ca bundle...")
-	wc := &webhook.Cert{}
-
-	if err := wc.GenerateWebhookCert(); err != nil {
-		return c, err
-	}
-
-	logger.Infoln("generating webhook server cert...")
-
-	if err = wc.Create(DEFAULT_SUBJECT); err != nil {
-		return c, err
-	}
-
-	c.Certs = Certs{
-		Ca:   b64.URLEncoding.EncodeToString(wc.Ca.Cert),
-		Cert: b64.URLEncoding.EncodeToString(wc.Cert),
-		Key:  b64.URLEncoding.EncodeToString(wc.Key),
-	}
-
 	if f != nil {
 		logger.Infoln("unmarshal bytes to config struct")
 
@@ -163,4 +144,28 @@ func LoadConfig(path string, logger logrus.FieldLogger) (*Config, error) {
 	}
 
 	return c, nil
+}
+
+func (c *Config) SetCerts(path string, logger logrus.FieldLogger) error {
+
+	logger.Infoln("generating ca bundle...")
+	wc := &webhook.Cert{}
+
+	if err := wc.GenerateWebhookCert(); err != nil {
+		return err
+	}
+
+	logger.Infoln("generating webhook server cert...")
+
+	if err := wc.Create(DEFAULT_SUBJECT); err != nil {
+		return err
+	}
+
+	c.Certs = Certs{
+		Ca:   b64.URLEncoding.EncodeToString(wc.Ca.Cert),
+		Cert: b64.URLEncoding.EncodeToString(wc.Cert),
+		Key:  b64.URLEncoding.EncodeToString(wc.Key),
+	}
+
+	return nil
 }

@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/yaml"
@@ -20,6 +21,7 @@ import (
 	"k8s.io/client-go/restmapper"
 
 	"github.com/sirupsen/logrus"
+	"github.com/soer3n/incident-operator/api/v1alpha1"
 	"github.com/soer3n/incident-operator/internal/templates/loader"
 	"github.com/soer3n/incident-operator/internal/utils"
 )
@@ -46,9 +48,57 @@ func New(logger logrus.FieldLogger) *CLI {
 		config: config,
 		logger: logger,
 		dr:     dr,
+		q: &v1alpha1.Quarantine{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-q",
+				Namespace: "incident-operator-system",
+			},
+			Spec: v1alpha1.QuarantineSpec{
+				Nodes:     []v1alpha1.Node{},
+				Resources: []v1alpha1.Resource{},
+				Debug: v1alpha1.Debug{
+					Enabled: false,
+				},
+				Flags: v1alpha1.Flags{
+					IgnoreAllDaemonSets: pointer.BoolPtr(false),
+					DisableEviction:     pointer.BoolPtr(false),
+					DeleteEmptyDirData:  pointer.BoolPtr(false),
+					Force:               pointer.BoolPtr(false),
+					IgnoreErrors:        pointer.BoolPtr(false),
+				},
+			},
+		},
+	}
+
+	nodeObjs := cli.getNodes()
+
+	for _, item := range nodeObjs.Items {
+		node := v1alpha1.Node{
+			Name:    item.Name,
+			Isolate: false,
+			Flags: v1alpha1.Flags{
+				IgnoreAllDaemonSets: pointer.BoolPtr(false),
+				DisableEviction:     pointer.BoolPtr(false),
+				DeleteEmptyDirData:  pointer.BoolPtr(false),
+				Force:               pointer.BoolPtr(false),
+				IgnoreErrors:        pointer.BoolPtr(false),
+			},
+			Resources: []v1alpha1.Resource{},
+		}
+
+		cli.q.Spec.Nodes = append(cli.q.Spec.Nodes, node)
 	}
 
 	return cli
+}
+
+func (cli CLI) GenerateWebhookCerts() error {
+
+	if err := cli.config.SetCerts("", cli.logger); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (cli *CLI) InstallResources() error {
@@ -113,7 +163,7 @@ func (cli *CLI) DeleteResources() error {
 	return nil
 }
 
-func GetNodes(logger logrus.FieldLogger) *corev1.NodeList {
+func (cli CLI) getNodes() *corev1.NodeList {
 
 	var nodes *corev1.NodeList
 	var err error
@@ -123,14 +173,14 @@ func GetNodes(logger logrus.FieldLogger) *corev1.NodeList {
 	listOpts := metav1.ListOptions{}
 
 	if nodes, err = c.CoreV1().Nodes().List(context.TODO(), listOpts); err != nil {
-		logger.Error(err)
+		cli.logger.Error(err)
 		return nil
 	}
 
 	return nodes
 }
 
-func GetPodsByNode(namespace, node string, logger logrus.FieldLogger) *corev1.PodList {
+func (cli CLI) getPodsByNode(namespace, node string) *corev1.PodList {
 
 	var pods *corev1.PodList
 	var err error
@@ -142,7 +192,7 @@ func GetPodsByNode(namespace, node string, logger logrus.FieldLogger) *corev1.Po
 	}
 
 	if pods, err = c.CoreV1().Pods(namespace).List(context.TODO(), listOpts); err != nil {
-		logger.Error(err)
+		cli.logger.Error(err)
 		return nil
 	}
 

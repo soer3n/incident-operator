@@ -1,18 +1,14 @@
 package cli
 
 import (
-	"encoding/json"
-	"fmt"
-
-	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-
-	v1 "k8s.io/api/core/v1"
 )
 
 const (
-	batchSize  = 80         // The number of rows loaded per batch.
-	finderPage = "*finder*" // The name of the Finder page.
+	batchSize          = 80                // The number of rows loaded per batch.
+	finderPage         = "workloads"       // The name of the Finder page.
+	finderHostPage     = "host"            // The name of the Finder page.
+	finderWorkloadPage = "workloadsfinder" // The name of the Finder page.
 )
 
 var (
@@ -28,135 +24,56 @@ func (cli *CLI) RenderPrepareView() (*tview.Application, error) {
 	nodes := tview.NewList().ShowSecondaryText(false)
 	nodes.SetBorder(true).SetTitle("Nodes")
 
-	menu := tview.NewTable().SetBorders(true)
-	menu.SetBorder(true).SetTitle("Menu")
+	menu := tview.NewTable().SetBorders(false)
+	menu.SetBorder(true).SetTitle("Settings")
+
+	hostMenu := tview.NewTable().SetBorders(false)
+	hostMenu.SetBorder(true).SetTitle("Settings")
+
+	workloadMenu := tview.NewTable().SetBorders(false)
+	workloadMenu.SetBorder(true).SetTitle("Settings")
 
 	workloads := tview.NewList()
-	workloads.ShowSecondaryText(false).
-		SetDoneFunc(func() {
-			workloads.Clear()
-			menu.Clear()
-			app.SetFocus(nodes)
-		})
-	workloads.SetBorder(true).SetTitle("Workloads")
+	workloads.SetBorder(true).SetTitle("Menu")
+
+	nodes = cli.initMainMenu(nodes, workloads, menu, hostMenu)
+	workloads = cli.initNodeMenu(nodes, workloads, menu, hostMenu)
+
+	workloadBoxFunc := cli.initModalSelectionFunc()
+	workloadBox := cli.initModalSelectionBox("modal", finderWorkloadPage, []string{"true", "false"}, workloadMenu, menu, nodes, workloads)
+
+	hostBoxFunc := cli.initModalSelectionFunc()
+	hostBox := cli.initModalSelectionBox("modalHost", finderHostPage, []string{"true", "false"}, hostMenu, menu, nodes, workloads)
+
+	hostMenu = cli.initHostSettingsMenu(hostMenu, nodes, workloads, hostBox)
+
+	workloadMenu = cli.initWorkloadSettingsMenu(workloadMenu, menu, workloads, nodes, workloadBox)
+	menu = cli.initWorkloadsMenu(menu, nodes, workloads, workloadMenu)
+
+	flexHost := tview.NewFlex().
+		AddItem(nodes, 0, 1, true).
+		AddItem(workloads, 0, 1, false).
+		AddItem(hostMenu, 0, 3, false)
+	pages = tview.NewPages().
+		AddPage(finderHostPage, flexHost, true, true).
+		AddPage("modalHost", hostBoxFunc(hostBox, 40, 20), true, false)
+
+	flexWorkloads := tview.NewFlex().
+		AddItem(nodes, 0, 1, true).
+		AddItem(workloads, 0, 1, false).
+		AddItem(workloadMenu, 0, 3, false)
+	pages = pages.
+		AddPage(finderWorkloadPage, flexWorkloads, true, false).
+		AddPage("modal", workloadBoxFunc(workloadBox, 40, 20), true, false)
 
 	flex := tview.NewFlex().
 		AddItem(nodes, 0, 1, true).
 		AddItem(workloads, 0, 1, false).
 		AddItem(menu, 0, 3, false)
 
-	pages = tview.NewPages().
-		AddPage(finderPage, flex, true, true)
+	pages = pages.
+		AddPage(finderPage, flex, true, false)
+
 	app.SetRoot(pages, true)
-
-	nodeObjs := GetNodes(cli.logger)
-
-	for _, node := range nodeObjs.Items {
-		nodes.AddItem(node.Name, "", 0, func() {
-			// A database was selected. Show all of its tables.
-			workloads.Clear()
-			menu.Clear()
-
-			pods := GetPodsByNode("", node.Name, cli.logger)
-
-			for _, pod := range pods.Items {
-				workloads.AddItem(pod.Name, "", 0, nil)
-			}
-
-			app.SetFocus(workloads)
-			workloads.SetChangedFunc(func(i int, tableName string, t string, s rune) {
-				menu.Clear()
-				menu.SetCell(0, 0, &tview.TableCell{Text: "Name", Align: tview.AlignCenter, Color: tcell.ColorYellow}).
-					SetCell(0, 1, &tview.TableCell{Text: "Namespace", Align: tview.AlignCenter, Color: tcell.ColorYellow}).
-					SetCell(0, 2, &tview.TableCell{Text: "Annotations", Align: tview.AlignCenter, Color: tcell.ColorYellow}).
-					SetCell(0, 3, &tview.TableCell{Text: "Labels", Align: tview.AlignCenter, Color: tcell.ColorYellow}).
-					SetCell(0, 4, &tview.TableCell{Text: "HostNetwork", Align: tview.AlignCenter, Color: tcell.ColorYellow})
-			})
-
-			color := tcell.ColorWhite
-
-			for ix, pod := range pods.Items {
-
-				rawAnnotations, _ := json.Marshal(pod.GetAnnotations())
-				rawLabels, _ := json.Marshal(pod.GetLabels())
-				hostNetwork := fmt.Sprintf("%v", pod.Spec.HostNetwork)
-
-				menu.SetCell(ix, 0, &tview.TableCell{Text: pod.Name, Color: color}).
-					SetCell(ix+1, 1, &tview.TableCell{Text: pod.GetNamespace(), Color: color}).
-					SetCell(ix+1, 2, &tview.TableCell{Text: string(rawAnnotations), Align: tview.AlignRight, Color: color}).
-					SetCell(ix+1, 3, &tview.TableCell{Text: string(rawLabels), Align: tview.AlignRight, Color: color}).
-					SetCell(ix+1, 4, &tview.TableCell{Text: string(hostNetwork), Align: tview.AlignLeft, Color: color})
-			}
-
-			workloads.SetCurrentItem(0)
-			workloads.SetChangedFunc(func(i int, podName string, t string, s rune) {
-				setContent(node, pods, podName)
-			})
-		})
-	}
-
 	return app, nil
-}
-
-func setContent(node v1.Node, pods *v1.PodList, podName string) {
-
-	finderFocus = app.GetFocus()
-
-	if pages.HasPage(node.Name + "." + podName) {
-		pages.SwitchToPage(node.Name + "." + podName)
-		return
-	}
-
-	table := tview.NewTable().
-		SetFixed(1, 0).
-		SetSeparator(tview.BoxDrawingsLightHorizontal).
-		SetBordersColor(tcell.ColorYellow)
-	frame := tview.NewFrame(table).
-		SetBorders(0, 0, 0, 0, 0, 0)
-	frame.SetBorder(true).
-		SetTitle(fmt.Sprintf(`Contents of table "%s"`, podName))
-
-	loadRows := func(offset int) {
-
-		table.SetCell(0, 0, &tview.TableCell{Text: "Name", Align: tview.AlignCenter, Color: tcell.ColorYellow}).
-			SetCell(0, 1, &tview.TableCell{Text: "Namespace", Align: tview.AlignCenter, Color: tcell.ColorYellow}).
-			SetCell(0, 2, &tview.TableCell{Text: "Annotations", Align: tview.AlignCenter, Color: tcell.ColorYellow}).
-			SetCell(0, 3, &tview.TableCell{Text: "Labels", Align: tview.AlignCenter, Color: tcell.ColorYellow}).
-			SetCell(0, 4, &tview.TableCell{Text: "HostNetwork", Align: tview.AlignCenter, Color: tcell.ColorYellow})
-
-		for ix, pod := range pods.Items {
-
-			rawAnnotations, _ := json.Marshal(pod.GetAnnotations())
-			rawLabels, _ := json.Marshal(pod.GetLabels())
-			hostNetwork := fmt.Sprintf("%v", pod.Spec.HostNetwork)
-
-			table.SetCell(ix, 0, &tview.TableCell{Text: pod.Name, Color: tcell.ColorDarkCyan}).
-				SetCell(ix+1, 1, &tview.TableCell{Text: pod.GetNamespace(), Color: tcell.ColorDarkCyan}).
-				SetCell(ix+1, 2, &tview.TableCell{Text: string(rawAnnotations), Align: tview.AlignRight, Color: tcell.ColorDarkCyan}).
-				SetCell(ix+1, 3, &tview.TableCell{Text: string(rawLabels), Align: tview.AlignRight, Color: tcell.ColorDarkCyan}).
-				SetCell(ix+1, 4, &tview.TableCell{Text: string(hostNetwork), Align: tview.AlignLeft, Color: tcell.ColorDarkCyan})
-		}
-
-		frame.Clear()
-	}
-
-	loadRows(0)
-
-	table.SetDoneFunc(func(key tcell.Key) {
-		switch key {
-		case tcell.KeyEscape:
-			// Go back to Finder.
-			pages.SwitchToPage(finderPage)
-			if finderFocus != nil {
-				app.SetFocus(finderFocus)
-			}
-		case tcell.KeyEnter:
-			// Load the next batch of rows.
-			loadRows(1)
-			table.ScrollToEnd()
-		}
-	})
-
-	// Add a new page and show it.
-	pages.AddPage(node.Name+"."+podName, frame, true, true)
 }
