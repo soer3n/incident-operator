@@ -1,12 +1,17 @@
 package cli
 
 import (
+	"context"
 	"strconv"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/soer3n/incident-operator/api/v1alpha1"
+	"github.com/soer3n/incident-operator/internal/utils"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -129,12 +134,15 @@ func (cli *CLI) setWorkloadSettings(workload, namespace, node string, menu, work
 	color := tcell.ColorWhite
 
 	r, _ := workloads.GetSelection()
-	nodeMenuSelection := workloads.GetCell(r, 0)
+	workloadSelection := workloads.GetCell(r, 0)
+
+	ownerName, ownerType := cli.getOwner(workloadSelection.Text, namespace)
 
 	workloadObj := v1alpha1.Resource{
-		Name:      nodeMenuSelection.Text,
+		Name:      ownerName,
 		Namespace: namespace,
 		Keep:      false,
+		Type:      ownerType,
 	}
 
 	for _, iv := range cli.q.Spec.Nodes {
@@ -159,13 +167,45 @@ func (cli *CLI) setWorkloadSettings(workload, namespace, node string, menu, work
 	}
 }
 
-func (cli *CLI) updateWorkloadSettings(cell *tview.TableCell, value string, workloads *tview.Table, nodes *tview.List) {
+func (cli *CLI) getOwner(podName, namespace string) (string, string) {
+
+	var rs *appsv1.ReplicaSet
+	var pod *corev1.Pod
+	var err error
+
+	c := utils.GetTypedKubernetesClient()
+
+	getOpts := metav1.GetOptions{}
+
+	if pod, err = c.CoreV1().Pods(namespace).Get(context.TODO(), podName, getOpts); err != nil {
+		cli.logger.Error(err)
+		return "", ""
+	}
+
+	ownerName := pod.ObjectMeta.OwnerReferences[0].Name
+	ownerType := pod.ObjectMeta.OwnerReferences[0].Kind
+
+	switch pod.ObjectMeta.OwnerReferences[0].Kind {
+	case "ReplicaSet":
+		if rs, err = c.AppsV1().ReplicaSets(namespace).Get(context.TODO(), pod.ObjectMeta.OwnerReferences[0].Name, getOpts); err != nil {
+			cli.logger.Error(err)
+		}
+		ownerName = rs.ObjectMeta.OwnerReferences[0].Name
+		ownerType = rs.ObjectMeta.OwnerReferences[0].Kind
+	}
+
+	return ownerName, ownerType
+}
+
+func (cli *CLI) updateWorkloadSettings(cell *tview.TableCell, value, namespace string, workloads *tview.Table, nodes *tview.List) {
 
 	r, _ := workloads.GetSelection()
 	workloadSelection := workloads.GetCell(r, 0)
 
 	ix := nodes.GetCurrentItem()
 	nodeSelection, _ := nodes.GetItemText(ix)
+
+	ownerName, ownerType := cli.getOwner(workloadSelection.Text, namespace)
 
 	list := []v1alpha1.Resource{}
 	key := 0
@@ -178,13 +218,13 @@ func (cli *CLI) updateWorkloadSettings(cell *tview.TableCell, value string, work
 	}
 
 	if len(list) == 0 {
-		list = append(list, v1alpha1.Resource{Name: workloadSelection.Text})
+		list = append(list, v1alpha1.Resource{Name: ownerName, Namespace: namespace, Type: ownerType})
 	}
 
 	itemIsPresent := false
 
 	for k, w := range list {
-		if workloadSelection.Text == w.Name {
+		if ownerName == w.Name {
 			switch cell.Text {
 			case "keep":
 				list[k].Keep, _ = strconv.ParseBool(value)
@@ -196,7 +236,7 @@ func (cli *CLI) updateWorkloadSettings(cell *tview.TableCell, value string, work
 
 	if !itemIsPresent {
 		keep, _ := strconv.ParseBool(value)
-		cli.q.Spec.Nodes[key].Resources = append(cli.q.Spec.Nodes[key].Resources, v1alpha1.Resource{Name: workloadSelection.Text, Keep: keep})
+		cli.q.Spec.Nodes[key].Resources = append(cli.q.Spec.Nodes[key].Resources, v1alpha1.Resource{Name: ownerName, Namespace: namespace, Type: ownerType, Keep: keep})
 	}
 
 }
@@ -388,12 +428,14 @@ func (cli *CLI) initModalSelectionBox(name, pageToSwitch string, options []strin
 	box.SetBorder(true).SetTitle("Options")
 	box.SetSelectedFunc(
 		func(index int, mainText string, secondaryText string, shortcut rune) {
-			//TODO: update quarantine struct
 			ix := nodeMenu.GetCurrentItem()
 			nodeMenuSelection, _ := nodeMenu.GetItemText(ix)
 
 			r, c := workloadMenu.GetSelection()
 			cell := workloadMenu.GetCell(r, c-1)
+
+			r, _ = workloads.GetSelection()
+			nsCell := workloads.GetCell(r, 1)
 
 			ix = nodes.GetCurrentItem()
 			nodeSelection, _ := nodes.GetItemText(ix)
@@ -403,8 +445,8 @@ func (cli *CLI) initModalSelectionBox(name, pageToSwitch string, options []strin
 				cli.updateNodesSettings(cell, mainText, nodes)
 				cli.setNodeSettings(nodeSelection, workloadMenu)
 			case "workloads":
-				cli.updateWorkloadSettings(cell, mainText, workloads, nodes)
-				cli.setWorkloadSettings(cell.Text, "", nodeSelection, workloadMenu, workloads)
+				cli.updateWorkloadSettings(cell, mainText, nsCell.Text, workloads, nodes)
+				cli.setWorkloadSettings(cell.Text, nsCell.Text, nodeSelection, workloadMenu, workloads)
 			}
 
 			pages.ShowPage(pageToSwitch).HidePage(name)
@@ -437,6 +479,18 @@ func (cli *CLI) initWorkloadsMenu(menu *tview.Table, nodes, workloads *tview.Lis
 	})
 
 	menu.SetSelectedFunc(func(row int, column int) {
+
+		ix := workloads.GetCurrentItem()
+		workloadSelection, _ := workloads.GetItemText(ix)
+
+		ix = nodes.GetCurrentItem()
+		nodeSelection, _ := nodes.GetItemText(ix)
+
+		r, _ := menu.GetSelection()
+		nsCell := menu.GetCell(r, 1)
+
+		cli.setWorkloadSettings(workloadSelection, nsCell.Text, nodeSelection, workloadMenu, menu)
+
 		pages.SwitchToPage(finderWorkloadPage)
 		app.SetFocus(workloadMenu)
 	})

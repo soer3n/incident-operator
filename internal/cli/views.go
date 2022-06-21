@@ -1,7 +1,15 @@
 package cli
 
 import (
+	"io/ioutil"
+	"os"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/ghodss/yaml"
 	"github.com/rivo/tview"
+	"github.com/soer3n/incident-operator/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
 const (
@@ -75,5 +83,51 @@ func (cli *CLI) RenderPrepareView() (*tview.Application, error) {
 		AddPage(finderPage, flex, true, false)
 
 	app.SetRoot(pages, true)
+	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyCtrlC:
+			if err := cli.writeQuarantineSpec(); err != nil {
+				cli.logger.Fatal(err)
+			}
+		}
+		return event
+	})
 	return app, nil
+}
+
+func (cli *CLI) RenderRunView() (*tview.Application, error) {
+	app = tview.NewApplication()
+	return app, nil
+}
+
+func (cli CLI) writeQuarantineSpec() error {
+	scheme := runtime.NewScheme()
+	v1alpha1.AddToScheme(scheme)
+	codec := serializer.NewCodecFactory(scheme).LegacyCodec(v1alpha1.GroupVersion)
+	output, _ := runtime.Encode(codec, cli.q)
+
+	res, err := yaml.JSONToYAML(output)
+
+	if err != nil {
+		return err
+	}
+
+	cd, err := os.Getwd()
+
+	if err != nil {
+		return err
+	}
+
+	if err = os.Chmod(cd, 0777); err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(cd+"/quarantine.yaml", res, 0644)
+
+	if err != nil {
+		return err
+	}
+
+	cli.logger.Info("data written")
+	return nil
 }
