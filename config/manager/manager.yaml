@@ -28,8 +28,9 @@ spec:
       - command:
         - /manager
         args:
+        - operator
         - --leader-elect
-        image: controller:latest
+        image: docker.io/soer3n/incident-operator:0.4.8
         name: manager
         securityContext:
           allowPrivilegeEscalation: false

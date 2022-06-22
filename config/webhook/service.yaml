@@ -16,7 +16,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: webhook-service
+  name: webhook-server-cert
   namespace: "{{.Namespace}}"
 data:
   "tls.key": "{{.Certs.Key}}"

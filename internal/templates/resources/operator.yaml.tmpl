@@ -361,7 +361,7 @@ data:
   tls.key: '{{.Certs.Key}}'
 kind: Secret
 metadata:
-  name: incident-operator-webhook-service
+  name: incident-operator-webhook-server-cert
   namespace: incident-operator-system
 ---
 apiVersion: v1
@@ -423,12 +423,13 @@ spec:
           name: https
           protocol: TCP
       - args:
+        - operator
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=127.0.0.1:8080
         - --leader-elect
         command:
         - /manager
-        image: controller:latest
+        image: docker.io/soer3n/incident-operator:0.4.8
         livenessProbe:
           httpGet:
             path: /healthz
@@ -467,7 +468,7 @@ spec:
       - name: cert
         secret:
           defaultMode: 420
-          secretName: webhook-server-cert
+          secretName: incident-operator-webhook-server-cert
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
