@@ -14,9 +14,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: 1.17
     - name: build
@@ -26,9 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: 1.17
     - name: test packages
@@ -39,17 +39,19 @@ jobs:
       fail-fast: false
       matrix:
         version:
-        - v1.21.1
-        - v1.20.7
-        - v1.19.11
+        - v1.24.1
+        - v1.23.6
+        - v1.22.9
+        - v1.21.12
+        - v1.20.15
     runs-on: ubuntu-latest
     name: test-e2e-controllers-${{ matrix.version }}
     needs:
     - build
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: 1.17
     - name: create k8s Kind cluster
@@ -67,9 +69,9 @@ jobs:
     needs:
     - build
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v3
       with:
         go-version: 1.17
     - name: install binaries for testing
