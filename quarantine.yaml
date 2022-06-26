@@ -1,0 +1,47 @@
+apiVersion: ops.soer3n.info/v1alpha1
+kind: Quarantine
+metadata:
+  creationTimestamp: null
+  name: test-q
+  namespace: incident-operator-system
+spec:
+  debug:
+    enabled: false
+  flags:
+    deleteEmptyDirData: false
+    disableEviction: false
+    force: false
+    ignoreAllDaemonSets: false
+    ignoreErrors: false
+  nodes:
+  - flags:
+      deleteEmptyDirData: false
+      disableEviction: false
+      force: false
+      ignoreAllDaemonSets: false
+      ignoreErrors: false
+    name: dev-cluster-control-plane
+  - flags:
+      deleteEmptyDirData: false
+      disableEviction: false
+      force: false
+      ignoreAllDaemonSets: false
+      ignoreErrors: false
+    name: dev-cluster-worker
+  - flags:
+      deleteEmptyDirData: false
+      disableEviction: false
+      force: false
+      ignoreAllDaemonSets: false
+      ignoreErrors: false
+    name: dev-cluster-worker2
+  - flags:
+      deleteEmptyDirData: false
+      disableEviction: false
+      force: false
+      ignoreAllDaemonSets: false
+      ignoreErrors: false
+    name: dev-cluster-worker3
+  resources: []
+status:
+  conditions: null

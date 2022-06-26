@@ -280,7 +280,7 @@ func getFakeClient() client.WithWatch {
 					Name:      "foo",
 					Namespace: "foo",
 					Labels: map[string]string{
-						"component": "incident-controller-manager",
+						"control-plane": "controller-manager",
 					},
 				},
 				Spec: corev1.PodSpec{

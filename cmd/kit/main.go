@@ -30,7 +30,7 @@ func NewRootCmd() *cobra.Command {
 	cmd.AddCommand(NewPrepareCmd(logger))
 	cmd.AddCommand(NewEditCmd(logger))
 	cmd.AddCommand(NewUnInstallCmd(logger))
-	cmd.AddCommand(NewStartCmd(logger))
+	cmd.AddCommand(NewRunCmd(logger))
 	cmd.AddCommand(NewStopCmd(logger))
 	return cmd
 }
@@ -126,12 +126,24 @@ func NewUnInstallCmd(logger logrus.FieldLogger) *cobra.Command {
 }
 
 // NewStartCmd represents the api subcommand
-func NewStartCmd(logger logrus.FieldLogger) *cobra.Command {
+func NewRunCmd(logger logrus.FieldLogger) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "start",
-		Short: "starts configured quarantine",
-		Long:  `starts configured quarantine`,
+		Use:   "run",
+		Short: "runs configured quarantine",
+		Long:  `runs configured quarantine`,
 		Run: func(cmd *cobra.Command, args []string) {
+
+			c := cli.New(logger)
+
+			app, err := c.RenderRunView()
+
+			if err != nil {
+				fmt.Printf("Error rendering terminal view: %s\n", err)
+			}
+
+			if err := app.Run(); err != nil {
+				fmt.Printf("Error running application: %s\n", err)
+			}
 		},
 	}
 

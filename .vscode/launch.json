@@ -80,6 +80,16 @@
             "args": ["prepare"]
         },
         {
+            "name": "Launch kit run",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "console": "integratedTerminal",
+            // "debugAdapter": "legacy",
+            "program": "${workspaceFolder}/cmd/kit/main.go",
+            "args": ["run"]
+        },
+        {
             "name": "Test quarantine package",
             "type": "go",
             "request": "launch",

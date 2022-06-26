@@ -17,6 +17,7 @@ import (
 	kyaml "k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/sirupsen/logrus"
+	"github.com/soer3n/incident-operator/api/v1alpha1"
 	"github.com/soer3n/incident-operator/internal/templates/resources"
 	"github.com/soer3n/incident-operator/internal/webhook"
 )
@@ -56,6 +57,7 @@ func LoadManifests(data interface{}, logger logrus.FieldLogger) ([]runtime.RawEx
 		}
 
 		logger.Infoln("Parsing manifests to bytes")
+		filePath = filepath.Clean(filePath)
 		manifestBytes, err := fs.ReadFile(fsys, filePath)
 
 		if err != nil {
@@ -120,12 +122,35 @@ type Certs struct {
 	Key  string
 }
 
+func LoadQuarantineSpec(path string, logger logrus.FieldLogger) (*v1alpha1.Quarantine, error) {
+
+	q := &v1alpha1.Quarantine{}
+
+	logger.Infoln("read config file")
+
+	path = filepath.Clean(path)
+	f, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		return q, err
+	}
+
+	if f != nil {
+		if err = yaml.Unmarshal(f, q); err != nil {
+			return q, err
+		}
+	}
+
+	return q, nil
+}
+
 func LoadConfig(path string, logger logrus.FieldLogger) (*Config, error) {
 
 	c := &Config{}
 
 	logger.Infoln("read config file")
 
+	path = filepath.Clean(path)
 	f, err := ioutil.ReadFile(path)
 
 	if err != nil {

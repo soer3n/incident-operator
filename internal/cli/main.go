@@ -26,8 +26,8 @@ import (
 	"github.com/soer3n/incident-operator/internal/utils"
 )
 
-const quarantineControllerLabelKey = "component"
-const quarantineControllerLabelValue = "incident-controller-manager"
+const quarantineControllerLabelKey = "control-plane"
+const quarantineControllerLabelValue = "controller-manager"
 const quarantineControllerLabelIgnoreNodeKey = "ops.soer3n.info/isolate"
 const quarantineControllerLabelIgnoreNodeValue = "true"
 
@@ -120,7 +120,9 @@ func (cli *CLI) InstallResources() error {
 			return err
 		}
 
-		cli.setDynamicClient(gvk, obj.GetNamespace())
+		if err := cli.setDynamicClient(gvk, obj.GetNamespace()); err != nil {
+			return err
+		}
 
 		cli.logger.Infof("create or update object %s. Kind: %s  APIVersion: %s", obj.GetName(), obj.GetKind(), obj.GetAPIVersion())
 
@@ -151,7 +153,9 @@ func (cli *CLI) DeleteResources() error {
 			return err
 		}
 
-		cli.setDynamicClient(gvk, obj.GetNamespace())
+		if err := cli.setDynamicClient(gvk, obj.GetNamespace()); err != nil {
+			return err
+		}
 
 		cli.logger.Infof("deleting object %s. Kind: %s  APIVersion: %s", obj.GetName(), obj.GetKind(), obj.GetAPIVersion())
 

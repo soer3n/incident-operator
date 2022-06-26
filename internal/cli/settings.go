@@ -277,7 +277,7 @@ func (cli *CLI) initMainMenu(nodes, workloads *tview.List, menu, hostMenu *tview
 	return nodes
 }
 
-func (cli *CLI) initNodeMenu(nodes, nodeMenu *tview.List, menu, hostMenu *tview.Table) *tview.List {
+func (cli *CLI) initNodeMenu(pages *tview.Pages, nodes, nodeMenu *tview.List, menu, hostMenu *tview.Table) *tview.List {
 
 	nodeMenu.ShowSecondaryText(false).
 		SetDoneFunc(func() {
@@ -342,7 +342,7 @@ func (cli *CLI) initNodeMenu(nodes, nodeMenu *tview.List, menu, hostMenu *tview.
 	return nodeMenu
 }
 
-func (cli *CLI) initHostSettingsMenu(hostMenu *tview.Table, nodes, workloads, boxHost *tview.List) *tview.Table {
+func (cli *CLI) initHostSettingsMenu(pages *tview.Pages, hostMenu *tview.Table, nodes, workloads, boxHost *tview.List) *tview.Table {
 
 	hostMenu.SetBorder(true).SetTitle("Settings")
 
@@ -422,7 +422,7 @@ func (cli *CLI) initModalSelectionFunc() func(p tview.Primitive, width, height i
 
 }
 
-func (cli *CLI) initModalSelectionBox(name, pageToSwitch string, options []string, workloadMenu, workloads *tview.Table, nodes, nodeMenu *tview.List) *tview.List {
+func (cli *CLI) initModalSelectionBox(pages *tview.Pages, name, pageToSwitch string, options []string, workloadMenu, workloads *tview.Table, nodes, nodeMenu *tview.List) *tview.List {
 
 	box := tview.NewList().SetHighlightFullLine(true)
 	box.SetBorder(true).SetTitle("Options")
@@ -462,7 +462,7 @@ func (cli *CLI) initModalSelectionBox(name, pageToSwitch string, options []strin
 
 }
 
-func (cli *CLI) initWorkloadsMenu(menu *tview.Table, nodes, workloads *tview.List, workloadMenu *tview.Table) *tview.Table {
+func (cli *CLI) initWorkloadsMenu(pages *tview.Pages, menu *tview.Table, nodes, workloads *tview.List, workloadMenu *tview.Table) *tview.Table {
 
 	menu.SetBorder(true).SetTitle("Settings")
 
@@ -478,27 +478,10 @@ func (cli *CLI) initWorkloadsMenu(menu *tview.Table, nodes, workloads *tview.Lis
 		}
 	})
 
-	menu.SetSelectedFunc(func(row int, column int) {
-
-		ix := workloads.GetCurrentItem()
-		workloadSelection, _ := workloads.GetItemText(ix)
-
-		ix = nodes.GetCurrentItem()
-		nodeSelection, _ := nodes.GetItemText(ix)
-
-		r, _ := menu.GetSelection()
-		nsCell := menu.GetCell(r, 1)
-
-		cli.setWorkloadSettings(workloadSelection, nsCell.Text, nodeSelection, workloadMenu, menu)
-
-		pages.SwitchToPage(finderWorkloadPage)
-		app.SetFocus(workloadMenu)
-	})
-
 	return menu
 }
 
-func (cli *CLI) initWorkloadSettingsMenu(workloadMenu, workloads *tview.Table, menu, nodes, box *tview.List) *tview.Table {
+func (cli *CLI) initWorkloadSettingsMenu(pages *tview.Pages, workloadMenu, workloads *tview.Table, menu, nodes, box *tview.List) *tview.Table {
 
 	workloadMenu.SetBorder(true).SetTitle("Settings")
 
@@ -508,9 +491,11 @@ func (cli *CLI) initWorkloadSettingsMenu(workloadMenu, workloads *tview.Table, m
 	ix = nodes.GetCurrentItem()
 	nodeSelection, _ := nodes.GetItemText(ix)
 
-	cli.setWorkloadSettings(workloadSelection, "", nodeSelection, workloadMenu, workloads)
+	workloads.Select(1, 1)
 
-	workloadMenu.Select(1, 1).SetFixed(1, 1).SetSelectable(true, true)
+	r, _ := workloads.GetSelection()
+	workloadNamespaceSelection := workloads.GetCell(r, 1)
+	cli.setWorkloadSettings(workloadSelection, workloadNamespaceSelection.Text, nodeSelection, workloadMenu, workloads)
 
 	workloadMenu.SetDoneFunc(func(key tcell.Key) {
 		switch key {
@@ -523,6 +508,24 @@ func (cli *CLI) initWorkloadSettingsMenu(workloadMenu, workloads *tview.Table, m
 	workloadMenu.SetSelectedFunc(func(row int, column int) {
 		pages.ShowPage("modal")
 		app.SetFocus(box)
+	})
+
+	workloads.SetSelectedFunc(func(row int, column int) {
+
+		ix := menu.GetCurrentItem()
+		workloadSelection, _ := menu.GetItemText(ix)
+
+		ix = nodes.GetCurrentItem()
+		nodeSelection, _ := nodes.GetItemText(ix)
+
+		r, _ := workloads.GetSelection()
+		nsCell := workloads.GetCell(r, 1)
+
+		cli.setWorkloadSettings(workloadSelection, nsCell.Text, nodeSelection, workloadMenu, workloads)
+
+		pages.SwitchToPage(finderWorkloadPage)
+		workloadMenu.Select(1, 0).SetFixed(1, 1).SetSelectable(true, false)
+		app.SetFocus(workloadMenu)
 	})
 
 	return workloadMenu

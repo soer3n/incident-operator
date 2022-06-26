@@ -22,8 +22,8 @@ var pod *corev1.Pod
 
 // var obj *v1alpha1.Quarantine
 
-const quarantineControllerLabelKey = "component"
-const quarantineControllerLabelValue = "incident-controller-manager"
+const quarantineControllerLabelKey = "control-plane"
+const quarantineControllerLabelValue = "controller-manager"
 
 // Handle handles admission requests.
 func (h *QuarantineValidateHandler) Handle(ctx context.Context, req admission.Request) admission.Response {
